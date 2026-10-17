@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monad Name Service (.monad) - Web3 Marketplace</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+
+  <!-- WalletConnect / AppKit CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/modal@2.6.2/dist/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090a10;
+      --card-bg: rgba(23, 25, 38, 0.85);
+      --card-border: rgba(131, 110, 249, 0.2);
+      --primary: #7b57ff;
+      --primary-hover: #6a42f5;
+      --secondary: #00f2fe;
+      --gradient: linear-gradient(135deg, #7b57ff 0%, #00f2fe 100%);
+      --gradient-card: linear-gradient(180deg, rgba(30, 32, 50, 0.6) 0%, rgba(18, 20, 32, 0.9) 100%);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(123, 87, 255, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(0, 242, 254, 0.12) 0%, transparent 40%);
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 10, 16, 0.7);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+    }
+    .logo-badge {
+      background: var(--gradient);
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .nav-stats {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .network-pill {
+      background: rgba(123, 87, 255, 0.12);
+      border: 1px solid rgba(123, 87, 255, 0.3);
+      color: #c4b5fd;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+    }
+    .btn-connect {
+      background: var(--gradient);
+      color: #fff;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-connect:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(123, 87, 255, 0.4);
+    }
+
+    .hero {
+      text-align: center;
+      padding: 70px 20px 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 16px;
+      border-radius: 30px;
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+    .hero h1 span {
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      color: var(--text-muted);
+      font-size: 17px;
+      line-height: 1.6;
+    }
+
+    /* Buscador Principal */
+    .search-wrapper {
+      max-width: 650px;
+      margin: 35px auto;
+      position: relative;
+    }
+    .search-bar {
+      display: flex;
+      align-items: center;
+      background: rgba(23, 25, 38, 0.9);
+      border: 2px solid var(--card-border);
+      border-radius: 50px;
+      padding: 8px 12px 8px 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transition: border-color 0.3s;
+    }
+    .search-bar:focus-within {
+      border-color: #7b57ff;
+      box-shadow: 0 0 25px rgba(123, 87, 255, 0.3);
+    }
+    .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .domain-ext {
+      font-weight: 700;
+      color: #a78bfa;
+      font-size: 18px;
+      margin-right: 15px;
+    }
+    .btn-search {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 26px;
+      border-radius: 40px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 15px;
+      transition: background 0.2s;
+    }
+    .btn-search:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Modal / Resultado de Búsqueda */
+    .result-card {
+      max-width: 650px;
+      margin: 20px auto 40px;
+      background: var(--gradient-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: none;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .result-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .badge-available {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 13px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-taken {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 13px;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .result-meta {
+      margin: 18px 0;
+      color: var(--text-muted);
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: 14px;
+    }
+    .btn-action-primary {
+      width: 100%;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-action-primary:hover { opacity: 0.95; }
+
+    /* Pestañas */
+    .tabs-nav {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 30px;
+    }
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--gradient);
+      color: white;
+      border-color: transparent;
+    }
+
+    /* Grid de Marketplace */
+    .section-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .domain-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .domain-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--primary);
+      box-shadow: 0 10px 25px rgba(123, 87, 255, 0.2);
+    }
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .domain-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+    }
+    .domain-name {
+      font-size: 19px;
+      font-weight: 800;
+      color: white;
+      word-break: break-all;
+    }
+    .card-price-box {
+      background: rgba(0,0,0,0.3);
+      padding: 12px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .card-price-label { font-size: 12px; color: var(--text-muted); }
+    .card-price-val { font-size: 16px; font-weight: 800; color: #34d399; }
+    .btn-buy {
+      background: rgba(123, 87, 255, 0.15);
+      color: #c4b5fd;
+      border: 1px solid rgba(123, 87, 255, 0.4);
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    .btn-buy:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Formulario de Venta */
+    .sell-box {
+      max-width: 500px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 30px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .form-group input {
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: white;
+      font-size: 15px;
+      outline: none;
+    }
+    .form-group input:focus {
+      border-color: var(--primary);
+    }
+
+    /* Notificación flotante */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1e2030;
+      border: 1px solid var(--card-border);
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      display: none;
+      z-index: 1000;
+      max-width: 350px;
+    }
+
+    @media (max-width: 768px) {
+      .navbar { padding: 15px 20px; }
+      .hero h1 { font-size: 32px; }
+      .hero p { font-size: 15px; }
+      .search-bar { padding: 6px 8px 6px 16px; }
+      .search-input { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  
+  
+  <!-- Modal Código QR Universal -->
+  <div id="qrModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; backdrop-filter:blur(8px); align-items:center; justify-content:center;">
+    <div style="background:#171926; border:1px solid rgba(131,110,249,0.3); border-radius:24px; width:92%; max-width:380px; padding:28px; text-align:center; box-shadow:0 25px 60px rgba(0,0,0,0.9);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px; color:#fff; display:flex; align-items:center; gap:8px;">
+          <span>📱</span> Escanea con tu Wallet
+        </h3>
+        <button onclick="closeQrModal()" style="background:none; border:none; color:#94a3b8; font-size:24px; cursor:pointer;">&times;</button>
+      </div>
+
+      <p style="font-size:13px; color:#94a3b8; margin-bottom:16px;">
+        Abre <strong>Ledger Live, Trust Wallet, Rainbow, MetaMask</strong> o cualquier app Web3 y escanea este código:
+      </p>
+
+      <div style="background:#fff; padding:16px; border-radius:16px; display:inline-block; margin-bottom:18px;" id="qrcodeBox"></div>
+
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button id="copyUriBtn" onclick="copyWalletConnectUri()" style="background:#222538; border:1px solid rgba(255,255,255,0.1); color:#c4b5fd; padding:10px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer;">
+          📋 Copiar enlace de conexión
+        </button>
+        <a id="openWalletMobileLink" href="#" style="background:#3b82f6; color:#fff; text-decoration:none; padding:12px; border-radius:10px; font-weight:700; font-size:14px; display:none;">
+          Abrir en App de Billetera
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Multi-Wallet -->
+  <div id="walletModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+    <div style="background:#171926; border:1px solid rgba(131,110,249,0.3); border-radius:20px; width:90%; max-width:400px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.8);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="margin:0; font-size:18px; color:#fff;">Conectar Billetera</h3>
+        <button onclick="closeWalletModal()" style="background:none; border:none; color:#94a3b8; font-size:22px; cursor:pointer;">&times;</button>
+      </div>
+      <div id="walletList" style="display:flex; flex-direction:column; gap:10px;">
+        <!-- Wallets detectadas dinamicamente -->
+      </div>
+      <p style="font-size:12px; color:#94a3b8; text-align:center; margin-top:16px;">
+        Compatible con MetaMask, Rabby, Phantom, Coinbase Wallet, Trust, Rainbow y cualquier wallet EVM (EIP-6963).
+      </p>
+    </div>
+  </div>
+
+  <!-- Barra de Navegación -->
+  <nav class="navbar">
+    <div class="logo">
+      <div class="logo-badge">🟣</div>
+      <span>Monad Names</span>
+    </div>
+    <div class="nav-stats">
+      <div class="network-pill">
+        <span class="status-dot"></span>
+        <span>Monad Testnet</span>
+      </div>
+      <button id="connectBtn" class="btn-connect" onclick="openWalletModal()">Conectar Wallet</button>
+    </div>
+  </nav>
+
+  <!-- Hero & Buscador de Dominios -->
+  <section class="hero">
+    <div class="hero-badge">⚡ Impulsado por la ultra-velocidad de Monad (10,000 TPS)</div>
+    <h1>Tu identidad descentralizada en <span>Monad</span></h1>
+    <p>Registra tu dominio .monad para pagos cripto sencillos, perfiles web3 y comercio sin intermediarios.</p>
+
+    <!-- Buscador -->
+    <div class="search-wrapper">
+      <div class="search-bar">
+        <input type="text" id="searchInput" class="search-input" placeholder="Busca tu nombre soñado..." />
+        <span class="domain-ext">.monad</span>
+        <button class="btn-search" onclick="checkDomainAvailability()">Buscar</button>
+      </div>
+    </div>
+
+    <!-- Resultado de Búsqueda -->
+    <div id="resultCard" class="result-card">
+      <div class="result-header">
+        <div class="result-title" id="resultName">nombre.monad</div>
+        <div id="resultBadge" class="badge-available">Disponible</div>
+      </div>
+      <div class="result-meta">
+        <span>Precio de registro:</span>
+        <strong style="color: #fff;">1 MON / año</strong>
+      </div>
+      <button id="btnActionRegister" class="btn-action-primary" onclick="registerSearchedDomain()">
+        Registrar Ahora (1 MON)
+      </button>
+    </div>
+  </section>
+
+  <!-- Pestañas de Navegación -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('explore')">Explorar Marketplace</button>
+    <button class="tab-btn" onclick="switchTab('sell')">Poner en Venta</button>
+    <button class="tab-btn" onclick="switchTab('my-domains')">Mis Dominios</button>
+  </div>
+
+  <!-- Sección: Explorar Marketplace -->
+  <section id="tab-explore" class="section-container">
+    <div class="grid" id="marketplaceGrid">
+
+      
+          <div class="card-price-box">
+            <span class="card-price-label">Precio</span>
+            <span class="card-price-val">0.1 MON</span>
+          </div>
+        </div>
+        <button class="btn-buy" style="background:#7b57ff; color:#fff;" onclick="buyRealDomain('103357684781104778633691223821500739502033301330586961472315038294477424998766', '0.1', 'monadgod')">
+          Comprar por 0.1 MON
+        </button>
+      </div>
+
+      <!-- Tarjetas dinámicas generadas con JS -->
+      <div class="domain-card">
+        <div>
+          <div class="card-top">
+            <div class="domain-avatar">⚡</div>
+            <div>
+              <div class="domain-name">monadgod.monad</div>
+              <small style="color: var(--text-muted)">ID: #10842</small>
+            </div>
+          </div>
+          <div class="card-price-box">
+            <span class="card-price-label">Precio</span>
+            <span class="card-price-val">5 MON</span>
+          </div>
+        </div>
+        <button class="btn-buy" onclick="quickBuy('monadgod', 5)">Comprar Dominio</button>
+      </div>
+
+      <div class="domain-card">
+        <div>
+          <div class="card-top">
+            <div class="domain-avatar">💎</div>
+            <div>
+              <div class="domain-name">alpha.monad</div>
+              <small style="color: var(--text-muted)">ID: #7491</small>
+            </div>
+          </div>
+          <div class="card-price-box">
+            <span class="card-price-label">Precio</span>
+            <span class="card-price-val">2.5 MON</span>
+          </div>
+        </div>
+        <button class="btn-buy" onclick="quickBuy('alpha', 2.5)">Comprar Dominio</button>
+      </div>
+
+      <div class="domain-card">
+        <div>
+          <div class="card-top">
+            <div class="domain-avatar">🚀</div>
+            <div>
+              <div class="domain-name">defi.monad</div>
+              <small style="color: var(--text-muted)">ID: #3902</small>
+            </div>
+          </div>
+          <div class="card-price-box">
+            <span class="card-price-label">Precio</span>
+            <span class="card-price-val">10 MON</span>
+          </div>
+        </div>
+        <button class="btn-buy" onclick="quickBuy('defi', 10)">Comprar Dominio</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección: Poner en Venta -->
+  <section id="tab-sell" class="section-container" style="display: none;">
+    <div class="sell-box">
+      <h2 style="font-size: 22px; margin-bottom: 20px; text-align: center;">Vender en el Marketplace</h2>
+      <div class="form-group">
+        <label>Nombre del Dominio (.monad)</label>
+        <input type="text" id="sellNameInput" placeholder="ej. satoshi" />
+      </div>
+      <div class="form-group">
+        <label>Precio en MON</label>
+        <input type="number" id="sellPriceInput" placeholder="ej. 15" />
+      </div>
+      <button class="btn-action-primary" onclick="listDomainForSale()">
+        Aprobar y Listar en Venta
+      </button>
+    </div>
+  </section>
+
+  <!-- Sección: Mis Dominios -->
+  <section id="tab-my-domains" class="section-container" style="display: none;">
+    <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+      <p style="font-size: 16px;">Conecta tu billetera para ver y administrar tus dominios registrados.</p>
+    </div>
+  </section>
+
+  <!-- Notificación Toast -->
+  <div id="toast" class="toast">
+    <div id="toastMessage" style="font-size: 14px; font-weight: 600;"></div>
+  </div>
+
+  <script>
+    const REGISTRY_ADDRESS = "0x37502BC21D386eC8Eded562DD1626E767F1361b4";
+    const MARKETPLACE_ADDRESS = "0x3A14D76195F6B8357F7e971dD7a9dDAAd89Cfb9D";
+
+    let provider, signer, userAddress;
+    let contractsData = null;
+
+    // Cargar ABI
+    fetch('contractsData.json')
+      .then(r => r.json())
+      .then(d => { contractsData = d; })
+      .catch(console.error);
+
+    function showToast(msg, isSuccess = true) {
+      const toast = document.getElementById("toast");
+      const text = document.getElementById("toastMessage");
+      text.innerText = msg;
+      text.style.color = isSuccess ? "#34d399" : "#f87171";
+      toast.style.display = "block";
+      setTimeout(() => { toast.style.display = "none"; }, 5000);
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      event.target.classList.add("active");
+
+      document.getElementById("tab-explore").style.display = tabId === 'explore' ? 'block' : 'none';
+      document.getElementById("tab-sell").style.display = tabId === 'sell' ? 'block' : 'none';
+      document.getElementById("tab-my-domains").style.display = tabId === 'my-domains' ? 'block' : 'none';
+      if(tabId === 'my-domains') loadMyDomains();
+    }
+
+    
+    let detectedWallets = [];
+    let selectedProvider = null;
+
+    // EIP-6963: Detección automática de todas las billeteras instaladas
+    window.addEventListener("eip6963:announceProvider", (event) => {
+      const exists = detectedWallets.some(w => w.info.uuid === event.detail.info.uuid);
+      if (!exists) {
+        detectedWallets.push(event.detail);
+      }
+    });
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+    
+    
+    
+    let currentWcUri = "";
+
+    function closeQrModal() {
+      document.getElementById("qrModal").style.display = "none";
+    }
+
+    function copyWalletConnectUri() {
+      if (currentWcUri) {
+        navigator.clipboard.writeText(currentWcUri);
+        const btn = document.getElementById("copyUriBtn");
+        btn.innerText = "✅ ¡Enlace copiado!";
+        setTimeout(() => { btn.innerText = "📋 Copiar enlace de conexión"; }, 2000);
+      }
+    }
+
+    async function connectWalletConnect() {
+      closeWalletModal();
+      showToast("Generando código QR...", true);
+
+      try {
+        // Cargar provider WalletConnect si no existe
+        if (!window.WalletConnectEthereumProvider) {
+          const s = document.createElement("script");
+          s.src = "https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
+          document.head.appendChild(s);
+          await new Promise(r => s.onload = r);
+        }
+
+        const ProviderClass = window.WalletConnectEthereumProvider?.default || window.WalletConnectEthereumProvider;
+        const wcProvider = await ProviderClass.init({
+          projectId: "c4f79cc821944d9680842e34466bfb",
+          chains: [10143],
+          optionalChains: [10143],
+          showQrModal: false, // Desactivar modal externo para pintarlo nosotros directamente
+          rpcMap: {
+            10143: "https://testnet-rpc.monad.xyz"
+          },
+          metadata: {
+            name: "Monad Domain Marketplace",
+            description: "Marketplace de dominios .monad",
+            url: window.location.origin,
+            icons: ["https://docs.monad.xyz/favicon.ico"]
+          }
+        });
+
+        // Escuchar el evento de URI de WalletConnect para renderizar el QR en pantalla
+        wcProvider.on("display_uri", (uri) => {
+          currentWcUri = uri;
+          const qrContainer = document.getElementById("qrcodeBox");
+          qrContainer.innerHTML = "";
+          new QRCode(qrContainer, {
+            text: uri,
+            width: 220,
+            height: 220,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+          });
+
+          const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          const mobileLink = document.getElementById("openWalletMobileLink");
+          if (isMobile) {
+            mobileLink.style.display = "block";
+            mobileLink.href = uri;
+          }
+
+          document.getElementById("qrModal").style.display = "flex";
+        });
+
+        await wcProvider.enable();
+        closeQrModal();
+        connectWithProvider(wcProvider, "WalletConnect / Ledger");
+
+      } catch (err) {
+        console.error("Error WC:", err);
+        // Si el usuario cancela o hay un error
+        if (!err.message?.includes("User closed")) {
+          showToast("Error de conexión: " + err.message, false);
+        }
+      }
+    }
+
+
+    function openWalletModal() {
+      const modal = document.getElementById("walletModal");
+      const list = document.getElementById("walletList");
+      list.innerHTML = "";
+
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      // 1. Opcion Universal: WalletConnect (Ledger, Trust, Rainbow, 300+ wallets con QR)
+      const wcBtn = document.createElement("button");
+      wcBtn.style.cssText = "display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; background:#1e293b; border:1px solid #3b82f6; border-radius:12px; color:#fff; font-weight:700; cursor:pointer; font-size:15px; margin-bottom:8px;";
+      wcBtn.innerHTML = `<img src="https://raw.githubusercontent.com/WalletConnect/walletconnect-assets/master/Logo/Blue%20(Default)/Logo.svg" width="28" height="28" /> WalletConnect / Ledger / QR`;
+      wcBtn.onclick = connectWalletConnect;
+      list.appendChild(wcBtn);
+
+      // 2. Opcion MetaMask
+      const mmBtn = document.createElement("button");
+      mmBtn.style.cssText = "display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; background:#222538; border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff; font-weight:700; cursor:pointer; font-size:15px;";
+      mmBtn.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" width="28" height="28" /> MetaMask App / Extensión`;
+      
+      mmBtn.onclick = () => {
+        if (window.ethereum) {
+          connectWithProvider(window.ethereum, "MetaMask");
+        } else if (isMobile) {
+          const cleanUrl = window.location.href.replace(/^https?:\/\//, "");
+          window.location.href = "https://metamask.app.link/dapp/" + cleanUrl;
+        } else {
+          connectWalletConnect();
+        }
+      };
+      list.appendChild(mmBtn);
+
+      // 3. Proveedores detectados (Phantom, Rabby, Coinbase, etc via EIP-6963)
+      if (detectedWallets.length > 0) {
+        detectedWallets.forEach(wallet => {
+          if (wallet.info.name.toLowerCase().includes("metamask")) return;
+          const btn = document.createElement("button");
+          btn.style.cssText = "display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; background:#222538; border:1px solid rgba(255,255,255,0.08); border-radius:12px; color:#fff; font-weight:700; cursor:pointer; font-size:15px;";
+          btn.innerHTML = `<img src="${wallet.info.icon}" width="28" height="28" style="border-radius:6px;" /> ${wallet.info.name}`;
+          btn.onclick = () => connectWithProvider(wallet.provider, wallet.info.name);
+          list.appendChild(btn);
+        });
+      }
+
+      // 4. Billetera inyectada generica
+      if (window.ethereum && detectedWallets.length === 0) {
+        const defaultBtn = document.createElement("button");
+        defaultBtn.style.cssText = "display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; background:#222538; border:1px solid rgba(255,255,255,0.08); border-radius:12px; color:#fff; font-weight:700; cursor:pointer; font-size:15px;";
+        defaultBtn.innerHTML = `🌐 Billetera Inyectada del Navegador`;
+        defaultBtn.onclick = () => connectWithProvider(window.ethereum, "Navegador");
+        list.appendChild(defaultBtn);
+      }
+
+      modal.style.display = "flex";
+    }
+
+
+
+    function closeWalletModal() {
+      document.getElementById("walletModal").style.display = "none";
+    }
+
+    async function connectWithProvider(ethProvider, walletName = "") {
+      closeWalletModal();
+      try {
+        await ethProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: "0x279F" }] // 10143
+        }).catch(async (e) => {
+          if (e.code === 4902) {
+            await ethProvider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: "0x279F",
+                chainName: "Monad Testnet",
+                nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
+                rpcUrls: ["https://testnet-rpc.monad.xyz"],
+                blockExplorerUrls: ["https://testnet.monadscan.com"]
+              }]
+            });
+          }
+        });
+
+        selectedProvider = ethProvider;
+        provider = new ethers.BrowserProvider(ethProvider);
+        signer = await provider.getSigner();
+        userAddress = await signer.getAddress();
+
+        const btn = document.getElementById("connectBtn");
+        btn.innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
+        btn.style.background = "rgba(16, 185, 129, 0.2)";
+        btn.style.color = "#34d399";
+        btn.style.border = "1px solid #10b981";
+
+        showToast("Conectado con " + (walletName || "tu billetera") + "!");
+      } catch (err) {
+        console.error(err);
+        showToast("Error al conectar: " + err.message, false);
+      }
+    }
+
+    async function connectWalletLegacy() {
+      const eth = window.ethereum;
+      if (!eth) {
+        showToast("Por favor abre esta web en el navegador de MetaMask", false);
+        return;
+      }
+
+      try {
+        await eth.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: "0x279F" }] // 10143
+        }).catch(async (e) => {
+          if (e.code === 4902) {
+            await eth.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: "0x279F",
+                chainName: "Monad Testnet",
+                nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
+                rpcUrls: ["https://testnet-rpc.monad.xyz"],
+                blockExplorerUrls: ["https://testnet.monadscan.com"]
+              }]
+            });
+          }
+        });
+
+        provider = new ethers.BrowserProvider(eth);
+        signer = await provider.getSigner();
+        userAddress = await signer.getAddress();
+
+        const btn = document.getElementById("connectBtn");
+        btn.innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
+        btn.style.background = "rgba(16, 185, 129, 0.2)";
+        btn.style.color = "#34d399";
+        btn.style.border = "1px solid #10b981";
+
+        showToast("¡Billetera conectada con éxito!");
+      } catch (err) {
+        console.error(err);
+        showToast("Error al conectar: " + err.message, false);
+      }
+    }
+
+    async function checkDomainAvailability() {
+      const term = document.getElementById("searchInput").value.trim().toLowerCase();
+      if (!term) return;
+
+      const card = document.getElementById("resultCard");
+      const nameLabel = document.getElementById("resultName");
+      const badge = document.getElementById("resultBadge");
+      const btn = document.getElementById("btnActionRegister");
+
+      nameLabel.innerText = term + ".monad";
+      card.style.display = "block";
+
+      try {
+        const rpc = new ethers.JsonRpcProvider("https://testnet-rpc.monad.xyz");
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, contractsData.registry.abi, rpc);
+        const available = await registry.isAvailable(term);
+
+        if (available) {
+          badge.className = "badge-available";
+          badge.innerText = "Disponible";
+          btn.disabled = false;
+          btn.innerText = "Registrar Ahora (1 MON)";
+          btn.style.opacity = "1";
+        } else {
+          badge.className = "badge-taken";
+          badge.innerText = "Ocupado";
+          btn.disabled = true;
+          btn.innerText = "Dominio ya registrado";
+          btn.style.opacity = "0.5";
+        }
+      } catch (e) {
+        console.error(e);
+        badge.className = "badge-available";
+        badge.innerText = "Disponible";
+      }
+    }
+
+    async function registerSearchedDomain() {
+      if (!signer) {
+        await connectWallet();
+        if (!signer) return;
+      }
+
+      const term = document.getElementById("searchInput").value.trim().toLowerCase();
+      try {
+        showToast("Firmando transacción en MetaMask...", true);
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, contractsData.registry.abi, signer);
+        const tx = await registry.register(term, { value: ethers.parseEther("1.0") });
+        showToast("Transacción enviada, confirmando...", true);
+        await tx.wait();
+        showToast(`¡Felicidades! ${term}.monad es tuyo.`);
+        checkDomainAvailability();
+      } catch (e) {
+        console.error(e);
+        showToast("Error: " + (e.reason || e.message), false);
+      }
+    }
+
+    async function listDomainForSale() {
+      if (!signer) {
+        await connectWallet();
+        if (!signer) return;
+      }
+
+      const name = document.getElementById("sellNameInput").value.trim().toLowerCase();
+      const price = document.getElementById("sellPriceInput").value.trim();
+
+      if (!name || !price) {
+        showToast("Completa el nombre y el precio", false);
+        return;
+      }
+
+      try {
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, contractsData.registry.abi, signer);
+        const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, contractsData.marketplace.abi, signer);
+        const tokenId = await registry.computeTokenId(name);
+
+        showToast("Paso 1/2: Aprobando en MetaMask...", true);
+        const appTx = await registry.approve(MARKETPLACE_ADDRESS, tokenId);
+        await appTx.wait();
+
+        showToast("Paso 2/2: Publicando en Marketplace...", true);
+        const listTx = await marketplace.listDomain(tokenId, ethers.parseEther(price));
+        await listTx.wait();
+
+        showToast(`¡${name}.monad listado por ${price} MON!`);
+        loadActiveListings();
+        switchTab("explore");
+      } catch (e) {
+        console.error(e);
+        showToast("Error: " + (e.reason || e.message), false);
+      }
+    }
+
+    
+    async function loadActiveListings() {
+      const grid = document.getElementById("marketplaceGrid");
+      if (!grid) return;
+
+      try {
+        const rpc = new ethers.JsonRpcProvider("https://testnet-rpc.monad.xyz");
+        const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, [
+          "event ItemListed(uint256 indexed tokenId, address indexed seller, uint256 price)",
+          "event ItemSold(uint256 indexed tokenId, address indexed buyer, address indexed seller, uint256 price)",
+          "event ListingCancelled(uint256 indexed tokenId, address indexed seller)",
+          "function listings(uint256) view returns (address seller, uint256 price, bool isActive)"
+        ], rpc);
+
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, [
+          "function domains(uint256) view returns (string name, address resolvedAddress, uint256 registeredAt, uint256 expiresAt, string textRecord)"
+        ], rpc);
+
+        // Consultar eventos de listado
+        const filter = marketplace.filters.ItemListed();
+        const events = await marketplace.queryFilter(filter, -5000); // últimos bloques
+
+        if (events.length === 0) {
+          grid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: var(--card-bg); border-radius: 16px; border: 1px dashed var(--card-border);">
+              <p style="font-size: 18px; color: #fff; margin-bottom: 8px;">No hay dominios en venta en este momento</p>
+              <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">¡Sé el primero en registrar un dominio y ponerlo a la venta!</p>
+              <button class="btn-action-primary" style="max-width: 240px; margin: 0 auto; display: block;" onclick="switchTab('sell')">Poner un dominio en venta</button>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = "";
+        for (const ev of events) {
+          const tokenId = ev.args.tokenId;
+          const listing = await marketplace.listings(tokenId);
+          if (listing.isActive) {
+            const domainInfo = await registry.domains(tokenId);
+            const domainName = domainInfo.name || "Dominio #" + tokenId.toString().slice(0, 6);
+            const priceInMon = ethers.formatEther(listing.price);
+
+            const card = document.createElement("div");
+            card.className = "domain-card";
+            card.innerHTML = `
+              <div>
+                <div class="card-top">
+                  <div class="domain-avatar">🟣</div>
+                  <div>
+                    <div class="domain-name">${domainName}.monad</div>
+                    <small style="color: var(--text-muted)">Vendedor: ${listing.seller.slice(0,6)}...${listing.seller.slice(38)}</small>
+                  </div>
+                </div>
+                <div class="card-price-box">
+                  <span class="card-price-label">Precio</span>
+                  <span class="card-price-val">${priceInMon} MON</span>
+                </div>
+              </div>
+              <button class="btn-buy" onclick="buyRealDomain('${tokenId}', '${priceInMon}', '${domainName}')">Comprar Dominio</button>
+            `;
+            grid.appendChild(card);
+          }
+        }
+      } catch (err) {
+        console.error("Error cargando listados reales:", err);
+      }
+    }
+
+    async function buyRealDomain(tokenId, price, name) {
+      if (!signer) {
+        openWalletModal();
+        return;
+      }
+
+      try {
+        showToast(`Comprando ${name}.monad por ${price} MON... Confirma en tu wallet`, true);
+        const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, contractsData.marketplace.abi, signer);
+        const tx = await marketplace.buyDomain(BigInt(tokenId), { value: ethers.parseEther(price) });
+        showToast("Transacción enviada, confirmando...", true);
+        await tx.wait();
+        showToast(`🎉 ¡Compraste ${name}.monad exitosamente!`, true);
+        loadActiveListings();
+      } catch (e) {
+        console.error(e);
+        showToast("Error: " + (e.reason || e.message), false);
+      }
+    }
+
+    async function quickBuy(name, price) {
+      if (!signer) {
+        await connectWallet();
+        if (!signer) return;
+      }
+
+      try {
+        showToast(`Comprando ${name}.monad por ${price} MON...`, true);
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, contractsData.registry.abi, signer);
+        const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, contractsData.marketplace.abi, signer);
+        const tokenId = await registry.computeTokenId(name);
+
+        const buyTx = await marketplace.buyDomain(tokenId, { value: ethers.parseEther(price.toString()) });
+        await buyTx.wait();
+        showToast(`¡Compraste ${name}.monad con éxito!`);
+      } catch (e) {
+        console.error(e);
+        showToast("Error: " + (e.reason || e.message), false);
+      }
+    }
+  </script>
+</body>
+</html>

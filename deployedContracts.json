@@ -1,0 +1,8 @@
+{
+  "registryAddress": "0x37502BC21D386eC8Eded562DD1626E767F1361b4",
+  "marketplaceAddress": "0x3A14D76195F6B8357F7e971dD7a9dDAAd89Cfb9D",
+  "registryTx": "0x4fb55248e02cd1abb88a55ab5c901ed2759f95b687911f0afdd804c883bea135",
+  "marketplaceTx": "0x61ab44514cdf8fa23de01a2cbc498c909f9b6e55885604a2fbd3c138a885012a",
+  "network": "Monad Testnet",
+  "chainId": 10143
+}
