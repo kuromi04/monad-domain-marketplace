@@ -474,7 +474,7 @@
         <span class="status-dot"></span>
         <span>Monad Testnet</span>
       </div>
-      <button id="connectBtn" class="btn-connect" onclick="openWalletModal()">Conectar Wallet</button>
+      <button id="connectBtn" class="btn-connect" onclick="handleAutoConnectOrModal()">Conectar Wallet</button>
     </div>
   </nav>
 
@@ -678,25 +678,61 @@
       }
     }
 
+    
+    async function handleAutoConnectOrModal() {
+      // 1. Si ya estamos dentro del navegador web3 de una wallet (MetaMask Mobile, Phantom, Trust, etc.)
+      if (window.ethereum) {
+        connectWithProvider(window.ethereum, "Billetera del Navegador");
+        return;
+      }
+      // 2. Si no hay proveedor inyectado (ej: Chrome móvil normal), abrir el modal con QR y enlaces
+      openWalletModal();
+    }
+  
+
     async function connectWalletConnect() {
+      // Si hay una billetera en el navegador, usarla directamente
+      if (window.ethereum) {
+        closeWalletModal();
+        connectWithProvider(window.ethereum, "Billetera Detectada");
+        return;
+      }
+
       closeWalletModal();
-      showToast("Generando código QR...", true);
+      showToast("Cargando WalletConnect...", true);
 
       try {
-        // Cargar provider WalletConnect si no existe
-        if (!window.WalletConnectEthereumProvider) {
-          const s = document.createElement("script");
-          s.src = "https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
-          document.head.appendChild(s);
-          await new Promise(r => s.onload = r);
+        if (!window.EthereumProvider && !window.WalletConnectEthereumProvider) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
+            script.onload = resolve;
+            script.onerror = () => {
+              // CDN alternativo
+              const alt = document.createElement("script");
+              alt.src = "https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
+              alt.onload = resolve;
+              alt.onerror = reject;
+              document.head.appendChild(alt);
+            };
+            document.head.appendChild(script);
+          });
         }
 
-        const ProviderClass = window.WalletConnectEthereumProvider?.default || window.WalletConnectEthereumProvider;
+        const ProviderClass = window.EthereumProvider || 
+                              window.WalletConnectEthereumProvider?.default || 
+                              window.WalletConnectEthereumProvider ||
+                              window["@walletconnect/ethereum-provider"]?.EthereumProvider;
+
+        if (!ProviderClass) {
+          throw new Error("No se pudo inicializar WalletConnect en este navegador. Si estás en móvil, usa el botón de MetaMask App.");
+        }
+
         const wcProvider = await ProviderClass.init({
           projectId: "c4f79cc821944d9680842e34466bfb",
           chains: [10143],
           optionalChains: [10143],
-          showQrModal: false, // Desactivar modal externo para pintarlo nosotros directamente
+          showQrModal: false,
           rpcMap: {
             10143: "https://testnet-rpc.monad.xyz"
           },
@@ -708,7 +744,6 @@
           }
         });
 
-        // Escuchar el evento de URI de WalletConnect para renderizar el QR en pantalla
         wcProvider.on("display_uri", (uri) => {
           currentWcUri = uri;
           const qrContainer = document.getElementById("qrcodeBox");
@@ -734,16 +769,14 @@
 
         await wcProvider.enable();
         closeQrModal();
-        connectWithProvider(wcProvider, "WalletConnect / Ledger");
+        connectWithProvider(wcProvider, "WalletConnect");
 
       } catch (err) {
         console.error("Error WC:", err);
-        // Si el usuario cancela o hay un error
-        if (!err.message?.includes("User closed")) {
-          showToast("Error de conexión: " + err.message, false);
-        }
+        showToast(err.message, false);
       }
     }
+  
 
 
     function openWalletModal() {
