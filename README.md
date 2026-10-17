@@ -1,59 +1,63 @@
-# Monad Web3 Domain Service & Marketplace (.monad)
+# 🟣 Monad Web3 Domain Service & Marketplace (.monad)
 
-Plataforma descentralizada de registro y marketplace para dominios Web3 sobre la red **Monad Testnet**.
+Plataforma descentralizada de registro, resolución de nombres y marketplace de dominios Web3 (.monad) desplegada y operativa en **Monad Testnet**.
 
-## 📁 Estructura del Proyecto
+[![GitHub Pages](https://img.shields.io/badge/Demo-Live%20on%20GitHub%20Pages-brightgreen)](https://kuromi04.github.io/monad-domain-marketplace/)
+[![Monad Testnet](https://img.shields.io/badge/Network-Monad%20Testnet%20(10143)-purple)](https://testnet.monadscan.com/)
 
+---
+
+## 🌐 Aplicación en Vivo (Producción)
+
+* 🚀 **Web Oficial:** [https://kuromi04.github.io/monad-domain-marketplace/](https://kuromi04.github.io/monad-domain-marketplace/)
+* 🦊 **Abrir directo en MetaMask App:** [Deep Link MetaMask Mobile](https://metamask.app.link/dapp/kuromi04.github.io/monad-domain-marketplace/)
+
+---
+
+## 📍 Smart Contracts Desplegados y Verificados en Monad
+
+Los contratos fueron compilados con `Solidity 0.8.24` y están activos en la red Monad Testnet (Chain ID `10143`):
+
+| Smart Contract | Archivo en Repositorio | Dirección On-Chain | Explorador Monadscan |
+| :--- | :--- | :--- | :--- |
+| **`MonadDomainRegistry`** | [`contracts/MonadDomainRegistry.sol`](./contracts/MonadDomainRegistry.sol) | `0x37502BC21D386eC8Eded562DD1626E767F1361b4` | [Ver Contrato](https://testnet.monadscan.com/address/0x37502BC21D386eC8Eded562DD1626E767F1361b4) |
+| **`MonadDomainMarketplace`** | [`contracts/MonadDomainMarketplace.sol`](./contracts/MonadDomainMarketplace.sol) | `0x3A14D76195F6B8357F7e971dD7a9dDAAd89Cfb9D` | [Ver Contrato](https://testnet.monadscan.com/address/0x3A14D76195F6B8357F7e971dD7a9dDAAd89Cfb9D) |
+
+---
+
+## 📁 Estructura del Repositorio
+
+```text
+├── contracts/                        # Smart Contracts principales
+│   ├── MonadDomainRegistry.sol       # Registro ERC-721 de dominios .monad, resolución y renovación
+│   └── MonadDomainMarketplace.sol    # Marketplace descentralizado (compra, venta y ofertas en MON)
+├── src/                              # Código fuente enlazado para Foundry
+│   ├── MonadDomainRegistry.sol
+│   └── MonadDomainMarketplace.sol
+├── test/                             # Tests unitarios en Foundry
+│   └── MonadDomainTest.t.sol         # Pruebas automatizadas (registro, compra y venta)
+├── script/                           # Scripts de despliegue
+│   └── Deploy.s.sol                  # Script de despliegue con Foundry
+├── frontend/                         # Frontend Web3 interactivo
+│   ├── index.html                    # Interfaz web con buscador, marketplace y "Mis Dominios"
+│   └── contractsData.json            # ABIs y configuración de contratos
+├── index.html                        # Punto de entrada para GitHub Pages
+├── foundry.toml                      # Configuración de compilador y RPC de Monad
+└── deployedContracts.json            # Metadatos del despliegue on-chain
 ```
-monad-domain-marketplace/
-├── contracts/
-│   ├── MonadDomainRegistry.sol      # Contrato ERC-721 para registro, resolución inversa y metadatos (.monad)
-│   └── MonadDomainMarketplace.sol   # Contrato de Marketplace para venta fija, compras y ofertas (bids) en MON
-├── scripts/
-│   └── deploy.js                    # Script de despliegue automatizado en Monad Testnet
-├── hardhat.config.js                # Configuración de compilador y red RPC de Monad
-└── frontend/
-    └── src/
-        ├── config/monadChain.ts     # Configuración de red de Monad con Viem
-        └── components/DomainApp.tsx # Interfaz para registro y publicación en marketplace
-```
 
 ---
 
-## ⚙️ Parámetros de Monad Testnet
+## ⚙️ Características Implementadas
 
-| Parámetro | Valor |
-| :--- | :--- |
-| **Network Name** | Monad Testnet |
-| **Chain ID** | `10143` |
-| **Moneda** | `MON` |
-| **RPC URL** | `https://testnet-rpc.monad.xyz` |
-| **Explorador** | [https://testnet.monadscan.com](https://testnet.monadscan.com) |
-| **Faucet** | [https://faucet.monad.xyz](https://faucet.monad.xyz) |
-
----
-
-## 🚀 Despliegue de los Smart Contracts
-
-1. **Instalar dependencias:**
-   ```bash
-   npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox @openzeppelin/contracts dotenv
-   ```
-
-2. **Configurar tu clave privada en variables de entorno o `.env`:**
-   ```bash
-   export PRIVATE_KEY="0xTU_CLAVE_PRIVADA"
-   export MONAD_TESTNET_RPC="https://testnet-rpc.monad.xyz"
-   ```
-
-3. **Compilar y desplegar en Monad Testnet:**
-   ```bash
-   npx hardhat run scripts/deploy.js --network monadTestnet
-   ```
-
----
-
-## 🔒 Consideraciones Específicas de Monad (EIP-7702)
-
-* Monad implementa **EIP-7702** permitiendo a las cuentas EOA delegar código de smart wallets y patrocinar gas.
-* Si el usuario usa una cuenta delegada con EIP-7702, las transacciones que dejen el saldo de la cuenta por debajo del umbral de reserva de **10 MON** revertirán automáticamente en la capa de ejecución de Monad.
+1. **Servicio de Nombres de Dominio (.monad)**:
+   * Emisión bajo estándar ERC-721 (NFT).
+   * Identificador único determinista `tokenId = keccak256(nombre)`.
+   * Período de renovación y resolución inversa (`address` $\to$ `primaryDomain`).
+2. **Marketplace Descentralizado**:
+   * Publicación con aprobación previa de transferencia ERC-721.
+   * Compraventa directa protegida contra reentrancy (`ReentrancyGuard`).
+   * Sistema de ofertas (*bids*) con depósito en custodia.
+3. **Compatibilidad Multi-Billetera**:
+   * Detección automática en navegadores Web3 (MetaMask Mobile, Phantom, Rabby, Trust Wallet).
+   * Soporte para estándar EIP-6963 y WalletConnect / QR para hardware wallets (Ledger).
