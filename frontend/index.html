@@ -107,6 +107,188 @@
       100% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.6); transform: scale(1.02); }
     }
 
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .nav-link {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+    .nav-link:hover, .nav-link.active {
+      color: #fff;
+    }
+
+    /* Sub-header ticker / trending TLDs */
+    .trending-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 10px 20px;
+      background: rgba(16, 17, 28, 0.5);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    .trending-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(131, 110, 249, 0.1);
+      border: 1px solid rgba(131, 110, 249, 0.25);
+      padding: 4px 12px;
+      border-radius: 20px;
+      color: #c4b5fd;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .trending-pill:hover {
+      background: rgba(131, 110, 249, 0.25);
+      color: #fff;
+    }
+
+    /* Feature Grid Section */
+    .features-section {
+      max-width: 1080px;
+      margin: 80px auto 40px;
+      padding: 0 24px;
+    }
+    .section-title {
+      text-align: center;
+      margin-bottom: 45px;
+    }
+    .section-title h2 {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      margin-bottom: 12px;
+    }
+    .section-title h2 span {
+      background: var(--gradient-brand);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .section-title p {
+      color: var(--text-muted);
+      font-size: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px 26px;
+      backdrop-filter: blur(16px);
+      transition: all 0.3s;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-glow);
+      background: var(--bg-card-hover);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 25px rgba(131, 110, 249, 0.15);
+    }
+    .feature-icon-box {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      background: var(--gradient-brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin-bottom: 20px;
+      box-shadow: 0 6px 18px rgba(131, 110, 249, 0.35);
+    }
+    .feature-card h3 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Comparison / Stats Banner */
+    .ecosystem-banner {
+      max-width: 1080px;
+      margin: 60px auto;
+      padding: 40px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(131, 110, 249, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid rgba(131, 110, 249, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 30px;
+      backdrop-filter: blur(20px);
+    }
+
+    /* Footer */
+    .site-footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(7, 8, 14, 0.95);
+      padding: 60px 48px 30px;
+      margin-top: 100px;
+    }
+    .footer-grid {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+    .footer-col h4 {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .footer-col ul {
+      list-style: none;
+    }
+    .footer-col li {
+      margin-bottom: 10px;
+    }
+    .footer-col a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.2s;
+    }
+    .footer-col a:hover {
+      color: #fff;
+    }
+    .footer-bottom {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding-top: 25px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      color: #64748b;
+      font-size: 13px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
     .nav-stats {
       display: flex;
       align-items: center;
@@ -606,10 +788,22 @@
 
   <!-- Barra de Navegación -->
   <nav class="navbar">
-    <div class="logo">
+    <div class="logo" onclick="switchTab('explore')">
       <div class="logo-badge">🟣</div>
-      <span>Monad Names</span>
+      <div>
+        <div style="line-height:1.1;">Monad Names</div>
+        <span style="font-size:10px; color:var(--monad-cyan); letter-spacing:1px; text-transform:uppercase; font-weight:700;">Accredited Registrar</span>
+      </div>
     </div>
+
+    <div class="nav-links">
+      <a class="nav-link active" onclick="switchTab('explore')">Marketplace</a>
+      <a class="nav-link" onclick="switchTab('sell')">Vender Dominio</a>
+      <a class="nav-link" onclick="switchTab('my-domains')">Mis Dominios</a>
+      <a class="nav-link" href="#toolsSection">Herramientas Web3</a>
+      <a class="nav-link" href="#whyMonadSection">Ecosistema</a>
+    </div>
+
     <div class="nav-stats">
       <div class="network-pill">
         <span class="status-dot"></span>
@@ -619,18 +813,29 @@
     </div>
   </nav>
 
+  <!-- Trending TLDs / Dominios Destacados al estilo Freename -->
+  <div class="trending-bar">
+    <span style="color:var(--text-muted); font-size:12px; font-weight:700; text-transform:uppercase;">🔥 Tendencias .monad:</span>
+    <span class="trending-pill" onclick="quickSearchInput('alpha')">💎 alpha.monad</span>
+    <span class="trending-pill" onclick="quickSearchInput('defi')">🚀 defi.monad</span>
+    <span class="trending-pill" onclick="quickSearchInput('satoshi')">🪙 satoshi.monad</span>
+    <span class="trending-pill" onclick="quickSearchInput('monadgod')">⚡ monadgod.monad</span>
+    <span class="trending-pill" onclick="quickSearchInput('pay')">💳 pay.monad</span>
+    <span class="trending-pill" onclick="quickSearchInput('vitalik')">🦄 vitalik.monad</span>
+  </div>
+
   <!-- Hero & Buscador de Dominios -->
   <section class="hero">
-    <div class="hero-badge">⚡ Impulsado por la ultra-velocidad de Monad (10,000 TPS)</div>
-    <h1>Tu identidad descentralizada en <span>Monad</span></h1>
-    <p>Registra tu dominio .monad para pagos cripto sencillos, perfiles web3 y comercio sin intermediarios.</p>
+    <div class="hero-badge">⚡ Impulsado por la ultra-velocidad de Monad (10,000 TPS) & Bajas Comisiones</div>
+    <h1>Tu identidad descentralizada en <span>Monad Web3</span></h1>
+    <p>Registra tu nombre .monad único, reemplaza largas direcciones 0x... por nombres legibles, comercia en el marketplace y monetiza tu presencia digital sin intermediarios.</p>
 
-    <!-- Buscador -->
+    <!-- Buscador Principal -->
     <div class="search-wrapper">
       <div class="search-bar">
-        <input type="text" id="searchInput" class="search-input" placeholder="Busca tu nombre soñado..." />
+        <input type="text" id="searchInput" class="search-input" placeholder="Busca tu nombre Web3 soñado..." onkeydown="if(event.key==='Enter') checkDomainAvailability()" />
         <span class="domain-ext">.monad</span>
-        <button class="btn-search" onclick="checkDomainAvailability()">Buscar</button>
+        <button class="btn-search" onclick="checkDomainAvailability()">Buscar Ahora</button>
       </div>
     </div>
 
@@ -641,8 +846,8 @@
         <div id="resultBadge" class="badge-available">Disponible</div>
       </div>
       <div class="result-meta">
-        <span>Precio de registro:</span>
-        <strong style="color: #fff;">1 MON / año</strong>
+        <span>Precio de registro anual:</span>
+        <strong style="color: #fff; font-size: 16px;">1 MON / año</strong>
       </div>
       <button id="btnActionRegister" class="btn-action-primary" onclick="registerSearchedDomain()">
         Registrar Ahora (1 MON)
@@ -650,11 +855,11 @@
     </div>
 
     <!-- Métricas en Vivo de Monad -->
-    <div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-top: 36px;">
+    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 36px;">
       <div style="background: rgba(16, 17, 28, 0.6); border: 1px solid rgba(255,255,255,0.06); padding: 12px 20px; border-radius: 14px; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 10px;">
         <span style="font-size: 20px;">⚡</span>
         <div style="text-align: left;">
-          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Throughput</div>
+          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Rendimiento</div>
           <div style="font-size: 15px; font-weight: 800; color: #fff;">10,000 TPS</div>
         </div>
       </div>
@@ -669,7 +874,14 @@
         <span style="font-size: 20px;">🛡️</span>
         <div style="text-align: left;">
           <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Estándar</div>
-          <div style="font-size: 15px; font-weight: 800; color: #a855f7;">ERC-721 Nativo</div>
+          <div style="font-size: 15px; font-weight: 800; color: #a855f7;">ERC-721 Seguro</div>
+        </div>
+      </div>
+      <div style="background: rgba(16, 17, 28, 0.6); border: 1px solid rgba(255,255,255,0.06); padding: 12px 20px; border-radius: 14px; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 20px;">💰</span>
+        <div style="text-align: left;">
+          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Comisión Marketplace</div>
+          <div style="font-size: 15px; font-weight: 800; color: #10b981;">Solo 2% Fee</div>
         </div>
       </div>
     </div>
@@ -718,6 +930,122 @@
       </div>
     </div>
   </section>
+
+  <!-- Sección de Herramientas & Utilidad estilo Freename -->
+  <section id="toolsSection" class="features-section">
+    <div class="section-title">
+      <h2>Todo lo que puedes hacer con tu <span>Dominio .monad</span></h2>
+      <p>Al igual que en Freename, tu dominio no es solo un NFT: es tu pasaporte, identidad y marca en todo el ecosistema Web3.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon-box">💳</div>
+        <h3>Pagos Cripto Simplificados</h3>
+        <p>Di adiós a copiar direcciones largas y confusas como <code>0x3750...61b4</code>. Comparte <code>tu-nombre.monad</code> para recibir MON y tokens al instante.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-box">🌐</div>
+        <h3>Web3 DNS & Sitios IPFS</h3>
+        <p>Enlaza tu dominio con registros descentralizados IPFS, Arweave o servidores tradicionales para crear portafolios y perfiles resistentes a censura.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-box">📈</div>
+        <h3>Inversión & Mercado Secundario</h3>
+        <p>Asegura nombres codiciados, marcas o nombres cortos de 3 letras. Ponlos a la venta fijando tu propio precio y cobra directamente en MON.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-box">🔐</div>
+        <h3>Identidad Soberana (DID)</h3>
+        <p>Conecta tus redes sociales, avatar y registros de texto con <code>setTextRecord</code> para tener un perfil universal verificado por blockchain.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-box">⚡</div>
+        <h3>Velocidad Monad 10k TPS</h3>
+        <p>Aprovecha la ejecución paralela y tiempos de bloque de 1 segundo de Monad con costos de gas casi nulos en transferencias y ofertas.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-box">🤝</div>
+        <h3>Regalías y Subastas P2P</h3>
+        <p>Contrato inteligente auditado con ReentrancyGuard, comisiones mínimas de solo 2% para creadores y soporte para ofertas y subastas descentralizadas.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Banner Informativo del Ecosistema -->
+  <div id="whyMonadSection" class="ecosystem-banner">
+    <div>
+      <h3 style="font-size:24px; font-weight:800; color:#fff; margin-bottom:8px;">¿Listo para reclamar tu identidad .monad?</h3>
+      <p style="color:var(--text-muted); font-size:15px; max-width:550px;">
+        Únete a los pioneros de la testnet de Monad. Registra nombres premium hoy y prepárate para el lanzamiento en la mainnet.
+      </p>
+    </div>
+    <button class="btn-connect" style="font-size:16px; padding:14px 32px;" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+      Buscar mi Dominio 🚀
+    </button>
+  </div>
+
+  <!-- Footer Profesional estilo Freename -->
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div>
+        <div class="logo" style="margin-bottom:14px;">
+          <div class="logo-badge">🟣</div>
+          <span>Monad Names</span>
+        </div>
+        <p style="color:var(--text-muted); font-size:14px; line-height:1.6; max-width:320px; margin-bottom:16px;">
+          El servicio y marketplace oficial de nombres y dominios Web3 para la blockchain Monad de ultra alta velocidad.
+        </p>
+        <div style="display:flex; gap:12px;">
+          <span style="background:rgba(255,255,255,0.06); padding:8px 12px; border-radius:10px; font-size:12px; color:#c4b5fd;">Chain ID: 10143</span>
+          <span style="background:rgba(255,255,255,0.06); padding:8px 12px; border-radius:10px; font-size:12px; color:#34d399;">Testnet Live</span>
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <h4>Dominios</h4>
+        <ul>
+          <li><a onclick="switchTab('explore')">Marketplace</a></li>
+          <li><a onclick="switchTab('sell')">Vender Dominio</a></li>
+          <li><a onclick="switchTab('my-domains')">Mis Dominios</a></li>
+          <li><a onclick="window.scrollTo({top:0, behavior:'smooth'})">Registrar .monad</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Herramientas</h4>
+        <ul>
+          <li><a href="#toolsSection">Web3 DNS</a></li>
+          <li><a href="#toolsSection">Resolución Inversa</a></li>
+          <li><a href="https://testnet.monadscan.com" target="_blank">Monadscan Explorer</a></li>
+          <li><a href="https://monad.xyz" target="_blank">Ecosistema Monad</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contratos</h4>
+        <ul>
+          <li><a href="https://testnet.monadscan.com/address/0x37502BC21D386eC8Eded562DD1626E767F1361b4" target="_blank">Registry Contract</a></li>
+          <li><a href="https://testnet.monadscan.com/address/0x3A14D76195F6B8357F7e971dD7a9dDAAd89Cfb9D" target="_blank">Marketplace Contract</a></li>
+          <li><a href="https://github.com/kuromi04/monad-domain-marketplace" target="_blank">GitHub Repo</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>© 2026 Monad Name Service. Inspirado en la arquitectura abierta de Freename. Todos los derechos reservados.</div>
+      <div style="display:flex; gap:20px;">
+        <span>Monad EVM</span>
+        <span>ERC-721</span>
+        <span>Descentralizado</span>
+      </div>
+    </div>
+  </footer>
 
   <!-- Notificación Toast -->
   <div id="toast" class="toast">
@@ -1037,8 +1365,18 @@
       }
     }
 
+    function quickSearchInput(name) {
+      const input = document.getElementById("searchInput");
+      if (input) {
+        input.value = name;
+        window.scrollTo({ top: 150, behavior: 'smooth' });
+        checkDomainAvailability();
+      }
+    }
+
     async function checkDomainAvailability() {
-      const term = document.getElementById("searchInput").value.trim().toLowerCase();
+      const inputVal = document.getElementById("searchInput").value.trim().toLowerCase();
+      const term = inputVal.replace(/^@/, "").replace(/\.monad$/, "").trim();
       if (!term) return;
 
       const card = document.getElementById("resultCard");
