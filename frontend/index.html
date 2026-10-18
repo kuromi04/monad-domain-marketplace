@@ -519,68 +519,8 @@
   <!-- Sección: Explorar Marketplace -->
   <section id="tab-explore" class="section-container">
     <div class="grid" id="marketplaceGrid">
-
-      
-          <div class="card-price-box">
-            <span class="card-price-label">Precio</span>
-            <span class="card-price-val">0.1 MON</span>
-          </div>
-        </div>
-        <button class="btn-buy" style="background:#7b57ff; color:#fff;" onclick="buyRealDomain('103357684781104778633691223821500739502033301330586961472315038294477424998766', '0.1', 'monadgod')">
-          Comprar por 0.1 MON
-        </button>
-      </div>
-
-      <!-- Tarjetas dinámicas generadas con JS -->
-      <div class="domain-card">
-        <div>
-          <div class="card-top">
-            <div class="domain-avatar">⚡</div>
-            <div>
-              <div class="domain-name">monadgod.monad</div>
-              <small style="color: var(--text-muted)">ID: #10842</small>
-            </div>
-          </div>
-          <div class="card-price-box">
-            <span class="card-price-label">Precio</span>
-            <span class="card-price-val">5 MON</span>
-          </div>
-        </div>
-        <button class="btn-buy" onclick="quickBuy('monadgod', 5)">Comprar Dominio</button>
-      </div>
-
-      <div class="domain-card">
-        <div>
-          <div class="card-top">
-            <div class="domain-avatar">💎</div>
-            <div>
-              <div class="domain-name">alpha.monad</div>
-              <small style="color: var(--text-muted)">ID: #7491</small>
-            </div>
-          </div>
-          <div class="card-price-box">
-            <span class="card-price-label">Precio</span>
-            <span class="card-price-val">2.5 MON</span>
-          </div>
-        </div>
-        <button class="btn-buy" onclick="quickBuy('alpha', 2.5)">Comprar Dominio</button>
-      </div>
-
-      <div class="domain-card">
-        <div>
-          <div class="card-top">
-            <div class="domain-avatar">🚀</div>
-            <div>
-              <div class="domain-name">defi.monad</div>
-              <small style="color: var(--text-muted)">ID: #3902</small>
-            </div>
-          </div>
-          <div class="card-price-box">
-            <span class="card-price-label">Precio</span>
-            <span class="card-price-val">10 MON</span>
-          </div>
-        </div>
-        <button class="btn-buy" onclick="quickBuy('defi', 10)">Comprar Dominio</button>
+      <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+        Cargando dominios en venta...
       </div>
     </div>
   </section>
@@ -591,11 +531,11 @@
       <h2 style="font-size: 22px; margin-bottom: 20px; text-align: center;">Vender en el Marketplace</h2>
       <div class="form-group">
         <label>Nombre del Dominio (.monad)</label>
-        <input type="text" id="sellNameInput" placeholder="ej. satoshi" />
+        <input type="text" id="sellNameInput" placeholder="ej. satoshi o satoshi.monad" />
       </div>
       <div class="form-group">
         <label>Precio en MON</label>
-        <input type="number" id="sellPriceInput" placeholder="ej. 15" />
+        <input type="number" id="sellPriceInput" step="0.001" min="0.0001" placeholder="ej. 15" />
       </div>
       <button class="btn-action-primary" onclick="listDomainForSale()">
         Aprobar y Listar en Venta
@@ -605,8 +545,11 @@
 
   <!-- Sección: Mis Dominios -->
   <section id="tab-my-domains" class="section-container" style="display: none;">
-    <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
-      <p style="font-size: 16px;">Conecta tu billetera para ver y administrar tus dominios registrados.</p>
+    <div id="myDomainsContainer">
+      <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+        <p style="font-size: 16px;">Conecta tu billetera para ver y administrar tus dominios registrados o comprados.</p>
+        <button class="btn-action-primary" style="max-width: 220px; margin: 16px auto 0;" onclick="openWalletModal()">Conectar Billetera</button>
+      </div>
     </div>
   </section>
 
@@ -637,14 +580,20 @@
       setTimeout(() => { toast.style.display = "none"; }, 5000);
     }
 
-    function switchTab(tabId) {
+    function switchTab(tabId, el) {
       document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-      event.target.classList.add("active");
+      if (el) {
+        el.classList.add("active");
+      } else {
+        const targetBtn = Array.from(document.querySelectorAll(".tab-btn")).find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes(`'${tabId}'`));
+        if (targetBtn) targetBtn.classList.add("active");
+      }
 
       document.getElementById("tab-explore").style.display = tabId === 'explore' ? 'block' : 'none';
       document.getElementById("tab-sell").style.display = tabId === 'sell' ? 'block' : 'none';
       document.getElementById("tab-my-domains").style.display = tabId === 'my-domains' ? 'block' : 'none';
-      if(tabId === 'my-domains') loadMyDomains();
+      if (tabId === 'my-domains') loadMyDomains();
+      if (tabId === 'explore') loadActiveListings();
     }
 
     
@@ -980,17 +929,25 @@
       }
     }
 
+    function prepareSellDomain(name) {
+      document.getElementById("sellNameInput").value = name;
+      document.getElementById("sellPriceInput").focus();
+      switchTab('sell');
+    }
+
     async function listDomainForSale() {
       if (!signer) {
-        await connectWallet();
-        if (!signer) return;
+        openWalletModal();
+        return;
       }
 
-      const name = document.getElementById("sellNameInput").value.trim().toLowerCase();
+      let rawName = document.getElementById("sellNameInput").value.trim().toLowerCase();
+      // Limpiar prefijo y sufijo si el usuario escribió con .monad o espacios
+      const name = rawName.replace(/^@/, "").replace(/\.monad$/, "").trim();
       const price = document.getElementById("sellPriceInput").value.trim();
 
-      if (!name || !price) {
-        showToast("Completa el nombre y el precio", false);
+      if (!name || !price || parseFloat(price) <= 0) {
+        showToast("Completa un nombre válido y un precio mayor a 0", false);
         return;
       }
 
@@ -999,20 +956,135 @@
         const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, contractsData.marketplace.abi, signer);
         const tokenId = await registry.computeTokenId(name);
 
-        showToast("Paso 1/2: Aprobando en MetaMask...", true);
-        const appTx = await registry.approve(MARKETPLACE_ADDRESS, tokenId);
-        await appTx.wait();
+        // Verificar que el usuario sea realmente el dueño del token
+        const owner = await registry.ownerOf(tokenId);
+        const currentAddress = await signer.getAddress();
+        if (owner.toLowerCase() !== currentAddress.toLowerCase()) {
+          showToast(`No eres el dueño de ${name}.monad (pertenece a ${owner.slice(0,6)}...${owner.slice(38)})`, false);
+          return;
+        }
+
+        // Verificar si ya tiene aprobación concedida
+        const isApprovedAll = await registry.isApprovedForAll(currentAddress, MARKETPLACE_ADDRESS);
+        const approvedSingle = await registry.getApproved(tokenId);
+        const isApproved = isApprovedAll || (approvedSingle.toLowerCase() === MARKETPLACE_ADDRESS.toLowerCase());
+
+        if (!isApproved) {
+          showToast("Paso 1/2: Aprobando marketplace en tu wallet...", true);
+          const appTx = await registry.approve(MARKETPLACE_ADDRESS, tokenId);
+          await appTx.wait();
+        }
 
         showToast("Paso 2/2: Publicando en Marketplace...", true);
         const listTx = await marketplace.listDomain(tokenId, ethers.parseEther(price));
         await listTx.wait();
 
-        showToast(`¡${name}.monad listado por ${price} MON!`);
+        showToast(`🎉 ¡${name}.monad listado exitosamente por ${price} MON!`);
+        document.getElementById("sellNameInput").value = "";
+        document.getElementById("sellPriceInput").value = "";
         loadActiveListings();
         switchTab("explore");
       } catch (e) {
         console.error(e);
         showToast("Error: " + (e.reason || e.message), false);
+      }
+    }
+
+    async function loadMyDomains() {
+      const container = document.getElementById("myDomainsContainer");
+      if (!container) return;
+
+      if (!signer || !userAddress) {
+        container.innerHTML = `
+          <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+            <p style="font-size: 16px; margin-bottom: 16px;">Conecta tu billetera para ver tus dominios registrados y comprados.</p>
+            <button class="btn-action-primary" style="max-width: 220px; margin: 0 auto; display: block;" onclick="openWalletModal()">Conectar Billetera</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); padding: 30px;">
+          <p>Buscando tus dominios en Monad...</p>
+        </div>
+      `;
+
+      try {
+        const rpc = new ethers.JsonRpcProvider("https://testnet-rpc.monad.xyz");
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, [
+          "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+          "function ownerOf(uint256) view returns (address)",
+          "function domains(uint256) view returns (string name, address resolvedAddress, uint256 registeredAt, uint256 expiresAt, string textRecord)"
+        ], rpc);
+
+        // Obtener eventos Transfer donde 'to' sea el usuario actual
+        const filter = registry.filters.Transfer(null, userAddress);
+        const events = await registry.queryFilter(filter, -10000);
+
+        const uniqueTokenIds = new Set();
+        events.forEach(ev => {
+          if (ev.args && ev.args.tokenId) {
+            uniqueTokenIds.add(ev.args.tokenId.toString());
+          }
+        });
+
+        // Filtrar aquellos donde el usuario aún sea el titular
+        const myDomains = [];
+        for (const tid of uniqueTokenIds) {
+          try {
+            const currentOwner = await registry.ownerOf(tid);
+            if (currentOwner.toLowerCase() === userAddress.toLowerCase()) {
+              const dInfo = await registry.domains(tid);
+              const domainName = dInfo.name || "Dominio #" + tid.slice(0, 6);
+              myDomains.push({ tokenId: tid, name: domainName, expiresAt: dInfo.expiresAt });
+            }
+          } catch (e) {
+            // El token pudo ser transferido o quemado
+          }
+        }
+
+        if (myDomains.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 40px; background: var(--card-bg); border-radius: 16px; border: 1px dashed var(--card-border);">
+              <p style="font-size: 18px; color: #fff; margin-bottom: 8px;">No tienes dominios en esta billetera</p>
+              <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Registra uno nuevo o compra uno en el marketplace.</p>
+              <button class="btn-action-primary" style="max-width: 240px; margin: 0 auto; display: block;" onclick="switchTab('explore')">Ir al Marketplace</button>
+            </div>
+          `;
+          return;
+        }
+
+        let html = `<div class="grid" style="margin-top: 10px;">`;
+        for (const dom of myDomains) {
+          html += `
+            <div class="domain-card">
+              <div>
+                <div class="card-top">
+                  <div class="domain-avatar">🏷️</div>
+                  <div>
+                    <div class="domain-name">${dom.name}.monad</div>
+                    <small style="color: var(--text-muted)">Titular: Tú</small>
+                  </div>
+                </div>
+                <div class="card-price-box" style="margin-top: 12px;">
+                  <span class="card-price-label">Estado</span>
+                  <span class="card-price-val" style="color:#34d399; font-size: 14px;">En tu poder</span>
+                </div>
+              </div>
+              <button class="btn-buy" style="background:#8b5cf6;" onclick="prepareSellDomain('${dom.name}')">Poner en Venta</button>
+            </div>
+          `;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+      } catch (err) {
+        console.error("Error al cargar dominios del usuario:", err);
+        container.innerHTML = `
+          <div style="text-align: center; color: #f87171; padding: 20px;">
+            Error cargando tus dominios: ${err.message || err}
+          </div>
+        `;
       }
     }
 
