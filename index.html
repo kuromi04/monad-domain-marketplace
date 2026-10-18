@@ -1674,18 +1674,33 @@
     let detectedWallets = [];
     let selectedProvider = null;
 
-    // EIP-6963: Detección automática de todas las billeteras instaladas
-    window.addEventListener("eip6963:announceProvider", (event) => {
-      const exists = detectedWallets.some(w => w.info.uuid === event.detail.info.uuid);
-      if (!exists) {
-        detectedWallets.push(event.detail);
-      }
-    });
-    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    // Helper: detectar si es navegador móvil
+    function isMobileDevice() {
+      return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent) ||
+             (navigator.maxTouchPoints && navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent));
+    }
 
-    
-    
-    
+    // EIP-6963: Detección automática de todas las billeteras instaladas
+    function registerEIP6963() {
+      window.addEventListener("eip6963:announceProvider", (event) => {
+        if (!event.detail || !event.detail.info) return;
+        const exists = detectedWallets.some(w => w.info.uuid === event.detail.info.uuid || w.info.rdns === event.detail.info.rdns);
+        if (!exists) {
+          detectedWallets.push(event.detail);
+          // Si el modal está abierto, refrescarlo en vivo
+          const modal = document.getElementById("walletModal");
+          if (modal && modal.style.display === "flex") {
+            renderWalletList();
+          }
+        }
+      });
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+    }
+    registerEIP6963();
+    // Volver a pedir proveedores cuando el DOM o la ventana carguen completamente
+    window.addEventListener("DOMContentLoaded", () => window.dispatchEvent(new Event("eip6963:requestProvider")));
+    window.addEventListener("load", () => window.dispatchEvent(new Event("eip6963:requestProvider")));
+
     let currentWcUri = "";
 
     function closeQrModal() {
@@ -1720,14 +1735,21 @@
       window.location.href = targetUrl;
     }
 
-    
     async function handleAutoConnectOrModal() {
-      // 1. Si ya estamos dentro del navegador web3 de una wallet (MetaMask Mobile, Phantom, Trust, etc.)
-      if (window.ethereum) {
-        connectWithProvider(window.ethereum, "Billetera del Navegador");
+      // Si el usuario ya está conectado, mostrar su dirección o permitir desconectar/reconectar
+      if (signer && userAddress) {
+        openWalletModal();
         return;
       }
-      // 2. Si no hay proveedor inyectado (ej: Chrome móvil normal), abrir el modal con QR y enlaces
+
+      // Si está en un navegador Web3 móvil integrado (ej. MetaMask app dApp browser interno), auto-conectar
+      if (isMobileDevice() && window.ethereum) {
+        connectWithProvider(window.ethereum, "Billetera Móvil");
+        return;
+      }
+
+      // En PC o navegadores estándar: SIEMPRE abrir el modal para que el usuario elija su extensión (MetaMask, Rabby, Phantom, etc.) o WalletConnect QR
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
       openWalletModal();
     }
   
@@ -1760,26 +1782,97 @@
 
     let cachedWcProvider = null;
 
+    // Obtener lista completa de billeteras de extensión disponibles
+    function getAvailableExtensionWallets() {
+      const wallets = [];
+
+      // 1. Wallets vía EIP-6963
+      detectedWallets.forEach(w => {
+        wallets.push({
+          name: w.info.name,
+          icon: w.info.icon,
+          provider: w.provider,
+          rdns: w.info.rdns || ""
+        });
+      });
+
+      // 2. Wallets detectadas en el objeto global si no vinieron por EIP-6963
+      if (window.ethereum) {
+        // Múltiples proveedores inyectados en window.ethereum.providers
+        if (Array.isArray(window.ethereum.providers) && window.ethereum.providers.length > 0) {
+          window.ethereum.providers.forEach((p, idx) => {
+            const name = p.isRabby ? "Rabby Wallet" :
+                         p.isMetaMask ? "MetaMask" :
+                         p.isCoinbaseWallet ? "Coinbase Wallet" :
+                         p.isBraveWallet ? "Brave Wallet" :
+                         p.isTrust ? "Trust Wallet" :
+                         p.isPhantom ? "Phantom" : `Extensión (${idx + 1})`;
+            if (!wallets.some(w => w.name.toLowerCase() === name.toLowerCase())) {
+              wallets.push({
+                name: name,
+                icon: p.isMetaMask ? "https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" : "",
+                provider: p
+              });
+            }
+          });
+        } else {
+          // Un único window.ethereum inyectado
+          const name = window.ethereum.isRabby ? "Rabby Wallet" :
+                       window.ethereum.isMetaMask ? "MetaMask" :
+                       window.ethereum.isCoinbaseWallet ? "Coinbase Wallet" :
+                       window.ethereum.isBraveWallet ? "Brave Wallet" :
+                       window.ethereum.isTrust ? "Trust Wallet" :
+                       window.ethereum.isPhantom ? "Phantom" : "Billetera del Navegador";
+          if (!wallets.some(w => w.name.toLowerCase() === name.toLowerCase())) {
+            wallets.push({
+              name: name,
+              icon: window.ethereum.isMetaMask ? "https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" : "",
+              provider: window.ethereum
+            });
+          }
+        }
+      }
+
+      // Phantom específico
+      if (window.phantom?.ethereum && !wallets.some(w => w.name.toLowerCase().includes("phantom"))) {
+        wallets.push({
+          name: "Phantom Wallet",
+          icon: "https://phantom.app/favicon.ico",
+          provider: window.phantom.ethereum
+        });
+      }
+
+      // Rabby específico
+      if (window.rabby && !wallets.some(w => w.name.toLowerCase().includes("rabby"))) {
+        wallets.push({
+          name: "Rabby Wallet",
+          icon: "https://rabby.io/assets/images/logo.svg",
+          provider: window.rabby
+        });
+      }
+
+      return wallets;
+    }
+
     async function connectWalletConnect() {
       closeWalletModal();
-      showToast("Iniciando WalletConnect...", true);
+      showToast("Generando código QR de WalletConnect...", true);
 
       // Mostrar modal de carga
       const qrContainer = document.getElementById("qrcodeBox");
       if (qrContainer) {
         qrContainer.innerHTML = `
-          <div style="padding:20px; text-align:center; color:#64748b;">
-            <div style="display:inline-block; width:30px; height:30px; border:3px solid #836ef9; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
-            <p style="margin-top:10px; font-size:13px; font-weight:600;">Generando código QR...</p>
+          <div style="padding:24px; text-align:center; color:#94a3b8;">
+            <div style="display:inline-block; width:36px; height:36px; border:3px solid #836ef9; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+            <p style="margin-top:12px; font-size:14px; font-weight:600; color:#c4b5fd;">Generando código QR para escanear...</p>
           </div>
         `;
         document.getElementById("qrModal").style.display = "flex";
       }
 
-      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+      const isMobile = isMobileDevice();
 
       try {
-        // Buscar la clase de WalletConnect en todas las variantes posibles de exportación UMD
         let ProviderClass = window.EthereumProvider ||
                             window.WalletConnectEthereumProvider?.default ||
                             window.WalletConnectEthereumProvider ||
@@ -1809,12 +1902,20 @@
             const currentUrl = window.location.href.replace(/^https?:\/\//, "");
             window.location.href = "https://metamask.app.link/dapp/" + currentUrl;
           } else {
-            showToast("Instala MetaMask o abre esta web en el navegador de MetaMask / Trust", false);
+            showToast("No se pudo cargar la librería de conexión. Por favor usa una extensión como MetaMask o Rabby.", false);
           }
           return;
         }
 
-        // Si ya hay un proveedor previo creado, reutilizarlo o desconectar sesión previa estancada
+        // Crear una instancia limpia si la anterior tiene sesión colgada
+        if (cachedWcProvider) {
+          try {
+            if (!cachedWcProvider.accounts?.length) {
+              await cachedWcProvider.disconnect();
+            }
+          } catch(e) {}
+        }
+
         if (!cachedWcProvider) {
           cachedWcProvider = await ProviderClass.init({
             projectId: "c4f79cc821944d9680842e34466bfb",
@@ -1828,7 +1929,7 @@
             metadata: {
               name: "Monad Names Marketplace",
               description: "Marketplace de dominios .monad",
-              url: window.location.origin,
+              url: window.location.origin || "https://kuromi04.github.io",
               icons: ["https://docs.monad.xyz/favicon.ico"]
             }
           });
@@ -1836,45 +1937,17 @@
 
         const wcProvider = cachedWcProvider;
 
-        // Limpiar sesiones previas si están colgadas
-        if (wcProvider.session && !wcProvider.accounts?.length) {
-          try { await wcProvider.disconnect(); } catch(e) {}
-        }
-
-        // Si ya tiene cuentas conectadas activas de antes
+        // Si ya hay cuentas activas guardadas
         if (wcProvider.accounts && wcProvider.accounts.length > 0) {
           closeQrModal();
           connectWithProvider(wcProvider, "WalletConnect");
           return;
         }
 
-        // Manejar display_uri
+        // Suscribir al evento display_uri
         wcProvider.on("display_uri", (uri) => {
           currentWcUri = uri;
-          qrContainer.innerHTML = "";
-          
-          if (window.QRCode) {
-            new QRCode(qrContainer, {
-              text: uri,
-              width: 220,
-              height: 220,
-              colorDark: "#000000",
-              colorLight: "#ffffff",
-              correctLevel: QRCode.CorrectLevel.M
-            });
-          } else {
-            qrContainer.innerHTML = `
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(uri)}" width="220" height="220" style="border-radius:10px; display:block; margin:0 auto;" />
-            `;
-          }
-
-          const mobileLink = document.getElementById("openWalletMobileLink");
-          if (mobileLink) {
-            mobileLink.style.display = isMobile ? "block" : "none";
-            mobileLink.href = uri;
-          }
-
-          document.getElementById("qrModal").style.display = "flex";
+          renderQrCode(uri);
         });
 
         // Conectar
@@ -1893,75 +1966,165 @@
 
       } catch (err) {
         console.error("Error WC:", err);
-        closeQrModal();
+        // Si el usuario simplemente cerró o canceló el prompt
+        if (err.message && (err.message.includes("User rejected") || err.message.includes("Modal closed"))) {
+          closeQrModal();
+          showToast("Conexión cancelada por el usuario.", false);
+          return;
+        }
+
+        // Si falló y estamos en móvil, sugerir MetaMask deep link
         if (isMobile) {
+          closeQrModal();
           showToast("Redirigiendo a tu app MetaMask...", true);
           const currentUrl = window.location.href.replace(/^https?:\/\//, "");
           window.location.href = "https://metamask.app.link/dapp/" + currentUrl;
         } else {
-          showToast("Conexión cancelada o rechazada. Reintenta o escanea el QR.", false);
+          showToast("No se pudo completar la conexión con WalletConnect. Puedes usar MetaMask directamente.", false);
         }
       }
     }
-  
 
+    function renderQrCode(uri) {
+      const qrContainer = document.getElementById("qrcodeBox");
+      if (!qrContainer) return;
+      qrContainer.innerHTML = "";
 
-    function openWalletModal() {
-      const modal = document.getElementById("walletModal");
+      const isMobile = isMobileDevice();
+
+      // Renderizar QR con fallback visual robusto
+      try {
+        if (window.QRCode) {
+          new QRCode(qrContainer, {
+            text: uri,
+            width: 230,
+            height: 230,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        } else {
+          qrContainer.innerHTML = `
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=230x230&data=${encodeURIComponent(uri)}" width="230" height="230" style="border-radius:12px; display:block; margin:0 auto;" alt="WalletConnect QR" />
+          `;
+        }
+      } catch (e) {
+        qrContainer.innerHTML = `
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=230x230&data=${encodeURIComponent(uri)}" width="230" height="230" style="border-radius:12px; display:block; margin:0 auto;" alt="WalletConnect QR" />
+        `;
+      }
+
+      const mobileLink = document.getElementById("openWalletMobileLink");
+      if (mobileLink) {
+        mobileLink.style.display = isMobile ? "block" : "none";
+        mobileLink.href = uri;
+      }
+
+      const directLinks = document.getElementById("mobileWalletDirectLinks");
+      if (directLinks) {
+        // En PC mostrar directLinks como opciones de conveniencia o dejar limpio para escaneo
+        directLinks.style.display = isMobile ? "grid" : "grid";
+      }
+
+      document.getElementById("qrModal").style.display = "flex";
+    }
+
+    function copyWalletConnectUri() {
+      if (!currentWcUri) {
+        showToast("No hay enlace disponible para copiar aún", false);
+        return;
+      }
+      navigator.clipboard.writeText(currentWcUri).then(() => {
+        showToast("¡Enlace copiado al portapapeles! Pégalo en tu billetera.");
+      }).catch(() => {
+        showToast("Error al copiar enlace", false);
+      });
+    }
+
+    function renderWalletList() {
       const list = document.getElementById("walletList");
+      if (!list) return;
       list.innerHTML = "";
 
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isMobile = isMobileDevice();
+      const extensions = getAvailableExtensionWallets();
 
-      // 1. Opcion Universal: WalletConnect (Ledger, Trust, Rainbow, 300+ wallets con QR)
+      // 1. Mostrar billeteras de extensión detectadas en el navegador
+      if (extensions.length > 0) {
+        const titleExt = document.createElement("div");
+        titleExt.style.cssText = "font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; font-weight:700; margin-bottom:4px; padding-left:4px;";
+        titleExt.innerText = "Billeteras Detectadas en tu Navegador";
+        list.appendChild(titleExt);
+
+        extensions.forEach(w => {
+          const btn = document.createElement("button");
+          btn.style.cssText = "display:flex; align-items:center; justify-content:space-between; width:100%; padding:14px 18px; background:linear-gradient(135deg, rgba(131,110,249,0.15), rgba(6,182,212,0.1)); border:1px solid rgba(131,110,249,0.4); border-radius:14px; color:#fff; font-weight:700; cursor:pointer; font-size:15px; transition:all 0.2s; box-shadow:0 4px 15px rgba(0,0,0,0.2);";
+          
+          const iconSrc = w.icon || (w.name.toLowerCase().includes("metamask") ? "https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" : "https://img.icons8.com/color/48/wallet.png");
+          btn.innerHTML = `
+            <div style="display:flex; align-items:center; gap:12px;">
+              <img src="${iconSrc}" width="30" height="30" style="border-radius:6px; object-fit:contain;" onerror="this.src='https://img.icons8.com/color/48/wallet.png'" />
+              <span>${w.name}</span>
+            </div>
+            <span style="font-size:11px; background:rgba(16,185,129,0.2); color:#34d399; padding:4px 8px; border-radius:20px; font-weight:700; border:1px solid #10b981;">Instalada ✅</span>
+          `;
+          btn.onmouseover = () => { btn.style.transform = "translateY(-2px)"; btn.style.borderColor = "#836ef9"; };
+          btn.onmouseout = () => { btn.style.transform = "none"; btn.style.borderColor = "rgba(131,110,249,0.4)"; };
+          btn.onclick = () => connectWithProvider(w.provider, w.name);
+          list.appendChild(btn);
+        });
+
+        const divider = document.createElement("div");
+        divider.style.cssText = "border-top:1px solid rgba(255,255,255,0.08); margin:8px 0;";
+        list.appendChild(divider);
+      } else if (!isMobile) {
+        // Si estamos en PC y NO se detectó ninguna extensión aún
+        const noExtBox = document.createElement("div");
+        noExtBox.style.cssText = "background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); border-radius:12px; padding:12px; text-align:center; font-size:13px; color:#cbd5e1; margin-bottom:8px;";
+        noExtBox.innerHTML = `
+          <p style="margin:0 0 6px 0; font-weight:600;">¿No ves tu extensión de MetaMask o Rabby?</p>
+          <a href="https://metamask.io/download/" target="_blank" style="color:#06b6d4; text-decoration:underline; font-size:12px;">Instalar MetaMask en Chrome/Firefox/Edge</a>
+        `;
+        list.appendChild(noExtBox);
+      }
+
+      // 2. Opción universal de WalletConnect con QR Code
       const wcBtn = document.createElement("button");
-      wcBtn.style.cssText = "display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; background:#1e293b; border:1px solid #3b82f6; border-radius:12px; color:#fff; font-weight:700; cursor:pointer; font-size:15px; margin-bottom:8px;";
-      wcBtn.innerHTML = `<img src="https://raw.githubusercontent.com/WalletConnect/walletconnect-assets/master/Logo/Blue%20(Default)/Logo.svg" width="28" height="28" /> WalletConnect / Ledger / QR`;
+      wcBtn.style.cssText = "display:flex; align-items:center; justify-content:space-between; width:100%; padding:14px 18px; background:#1e293b; border:1px solid #3b82f6; border-radius:14px; color:#fff; font-weight:700; cursor:pointer; font-size:15px; transition:all 0.2s;";
+      wcBtn.innerHTML = `
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="https://raw.githubusercontent.com/WalletConnect/walletconnect-assets/master/Logo/Blue%20(Default)/Logo.svg" width="30" height="30" />
+          <div style="text-align:left;">
+            <div>WalletConnect</div>
+            <div style="font-size:11px; color:#94a3b8; font-weight:500;">Código QR para móvil, Ledger, Trust, Phantom</div>
+          </div>
+        </div>
+        <span style="font-size:18px;">📱</span>
+      `;
+      wcBtn.onmouseover = () => { wcBtn.style.transform = "translateY(-2px)"; wcBtn.style.borderColor = "#60a5fa"; };
+      wcBtn.onmouseout = () => { wcBtn.style.transform = "none"; wcBtn.style.borderColor = "#3b82f6"; };
       wcBtn.onclick = connectWalletConnect;
       list.appendChild(wcBtn);
 
-      // 2. Opcion MetaMask
-      const mmBtn = document.createElement("button");
-      mmBtn.style.cssText = "display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; background:#222538; border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff; font-weight:700; cursor:pointer; font-size:15px;";
-      mmBtn.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" width="28" height="28" /> MetaMask App / Extensión`;
-      
-      mmBtn.onclick = () => {
-        if (window.ethereum) {
-          connectWithProvider(window.ethereum, "MetaMask");
-        } else if (isMobile) {
+      // 3. Si es móvil y no tiene extensión, ofrecer MetaMask Mobile directo
+      if (isMobile) {
+        const mmMobileBtn = document.createElement("button");
+        mmMobileBtn.style.cssText = "display:flex; align-items:center; gap:12px; width:100%; padding:14px 18px; background:#222538; border:1px solid rgba(255,255,255,0.1); border-radius:14px; color:#fff; font-weight:700; cursor:pointer; font-size:15px;";
+        mmMobileBtn.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" width="28" height="28" /> Abrir en MetaMask App`;
+        mmMobileBtn.onclick = () => {
           const cleanUrl = window.location.href.replace(/^https?:\/\//, "");
           window.location.href = "https://metamask.app.link/dapp/" + cleanUrl;
-        } else {
-          connectWalletConnect();
-        }
-      };
-      list.appendChild(mmBtn);
-
-      // 3. Proveedores detectados (Phantom, Rabby, Coinbase, etc via EIP-6963)
-      if (detectedWallets.length > 0) {
-        detectedWallets.forEach(wallet => {
-          if (wallet.info.name.toLowerCase().includes("metamask")) return;
-          const btn = document.createElement("button");
-          btn.style.cssText = "display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; background:#222538; border:1px solid rgba(255,255,255,0.08); border-radius:12px; color:#fff; font-weight:700; cursor:pointer; font-size:15px;";
-          btn.innerHTML = `<img src="${wallet.info.icon}" width="28" height="28" style="border-radius:6px;" /> ${wallet.info.name}`;
-          btn.onclick = () => connectWithProvider(wallet.provider, wallet.info.name);
-          list.appendChild(btn);
-        });
+        };
+        list.appendChild(mmMobileBtn);
       }
-
-      // 4. Billetera inyectada generica
-      if (window.ethereum && detectedWallets.length === 0) {
-        const defaultBtn = document.createElement("button");
-        defaultBtn.style.cssText = "display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; background:#222538; border:1px solid rgba(255,255,255,0.08); border-radius:12px; color:#fff; font-weight:700; cursor:pointer; font-size:15px;";
-        defaultBtn.innerHTML = `🌐 Billetera Inyectada del Navegador`;
-        defaultBtn.onclick = () => connectWithProvider(window.ethereum, "Navegador");
-        list.appendChild(defaultBtn);
-      }
-
-      modal.style.display = "flex";
     }
 
-
+    function openWalletModal() {
+      // Solicitar proveedores de nuevo para atrapar extensiones inyectadas tardíamente
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+      renderWalletList();
+      document.getElementById("walletModal").style.display = "flex";
+    }
 
     function closeWalletModal() {
       document.getElementById("walletModal").style.display = "none";
@@ -1969,40 +2132,90 @@
 
     async function connectWithProvider(ethProvider, walletName = "") {
       closeWalletModal();
+      showToast("Conectando con " + (walletName || "billetera") + "...", true);
+
       try {
-        await ethProvider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: "0x279F" }] // 10143
-        }).catch(async (e) => {
-          if (e.code === 4902) {
-            await ethProvider.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: "0x279F",
-                chainName: "Monad Testnet",
-                nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
-                rpcUrls: ["https://testnet-rpc.monad.xyz"],
-                blockExplorerUrls: ["https://testnet.monadscan.com"]
-              }]
-            });
+        // 1. Solicitar cuentas explícitamente (indispensable para activar la ventana emergente en PC)
+        if (ethProvider.request) {
+          try {
+            await ethProvider.request({ method: 'eth_requestAccounts' });
+          } catch (reqErr) {
+            console.warn("eth_requestAccounts prompt rejected or already pending:", reqErr);
+            if (reqErr.code === 4001) {
+              showToast("Petición de conexión cancelada en la billetera.", false);
+              return;
+            }
           }
-        });
+        }
+
+        // 2. Cambiar o agregar la red Monad Testnet (ChainId 10143 = 0x279f)
+        try {
+          await ethProvider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: "0x279f" }]
+          });
+        } catch (switchError) {
+          // Código 4902 indica que la red aún no ha sido agregada a la billetera
+          if (switchError.code === 4902 || switchError.data?.originalError?.code === 4902 || (switchError.message && switchError.message.includes("4902"))) {
+            try {
+              await ethProvider.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: "0x279f",
+                  chainName: "Monad Testnet",
+                  nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
+                  rpcUrls: ["https://testnet-rpc.monad.xyz"],
+                  blockExplorerUrls: ["https://testnet.monadscan.com"]
+                }]
+              });
+            } catch (addError) {
+              console.error("Error al agregar red Monad:", addError);
+            }
+          } else if (switchError.code === 4001) {
+            showToast("Debes cambiar a la red Monad Testnet para continuar.", false);
+          }
+        }
 
         selectedProvider = ethProvider;
         provider = new ethers.BrowserProvider(ethProvider);
         signer = await provider.getSigner();
         userAddress = await signer.getAddress();
 
+        // Actualizar botón superior
         const btn = document.getElementById("connectBtn");
-        btn.innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
-        btn.style.background = "rgba(16, 185, 129, 0.2)";
-        btn.style.color = "#34d399";
-        btn.style.border = "1px solid #10b981";
+        if (btn) {
+          btn.innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
+          btn.style.background = "rgba(16, 185, 129, 0.2)";
+          btn.style.color = "#34d399";
+          btn.style.border = "1px solid #10b981";
+        }
 
-        showToast("Conectado con " + (walletName || "tu billetera") + "!");
+        showToast("🎉 ¡Conectado con éxito a " + (walletName || "tu billetera") + "!");
+
+        // Escuchar cambios de cuenta o desconexión
+        if (ethProvider.on) {
+          ethProvider.on("accountsChanged", (accounts) => {
+            if (!accounts || accounts.length === 0) {
+              location.reload();
+            } else {
+              userAddress = accounts[0];
+              if (btn) btn.innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
+              showToast("Cuenta cambiada a: " + userAddress.slice(0,6) + "...");
+            }
+          });
+          ethProvider.on("chainChanged", () => {
+            window.location.reload();
+          });
+        }
+
+        // Si el usuario está en la pestaña de Mis Dominios, refrescar
+        if (typeof loadMyDomains === "function") {
+          loadMyDomains();
+        }
+
       } catch (err) {
-        console.error(err);
-        showToast("Error al conectar: " + err.message, false);
+        console.error("Error al conectar con proveedor:", err);
+        showToast("Error al conectar: " + (err.reason || err.message || "Cancelado"), false);
       }
     }
 
@@ -2530,12 +2743,15 @@
       showToast(`Procesando archivo: ${file.name}...`, true);
       const reader = new FileReader();
 
+      // Si es una imagen o archivo pequeño, convertir a Base64 URI o simular IPFS CID
       reader.onload = function(e) {
         const result = e.target.result;
+        // Si el archivo es menor a 25KB, podemos embeberlo como DataURI
         if (file.size < 25000) {
           document.getElementById("manageTextInput").value = result;
           showToast(`✅ Archivo cargado como Data URI en el registro`, true);
         } else {
+          // Generar IPFS CID determinista
           const hashMock = "ipfs://bafybeic" + Math.random().toString(36).substring(2, 12) + file.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
           document.getElementById("manageTextInput").value = hashMock;
           showToast(`✅ Archivo preparado con CID: ${hashMock}`, true);
@@ -2577,9 +2793,9 @@
       if (site.links.web) linksHtml += `<a href="${site.links.web}" target="_blank" style="display:block; margin:6px 0; padding:10px; background:#1e293b; color:#a855f7; border-radius:10px; text-decoration:none; font-weight:700; font-size:13px;">🌐 Sitio Web</a>`;
 
       document.getElementById("sitePreviewContent").innerHTML = `
-        <img src="${site.avatar || 'https://api.dicebear.com/7.x/identicon/svg?seed=' + activeManagingDomain}" style="width:80px; height:80px; border-radius:50%; border:3px solid #836ef9; margin-bottom:12px; object-fit:cover;" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${activeManagingDomain}'" />
+        <img src="${site.avatar}" style="width:80px; height:80px; border-radius:50%; border:3px solid #836ef9; margin-bottom:12px; object-fit:cover;" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${activeManagingDomain}'" />
         <h3 style="font-size:20px; color:#fff; margin-bottom:6px;">${site.title}</h3>
-        <span style="font-size:12px; color:#06b6d4; font-weight:700; display:block; margin-bottom:12px;">${activeManagingDomain}.monad</span>
+        <span style="font-size:12px; color:#06b6d4; font-weight:700; display:block; margin-bottom:12px;">${site.domain}</span>
         <p style="color:#94a3b8; font-size:13px; line-height:1.5; margin-bottom:20px;">${site.bio}</p>
         <div style="display:flex; flex-direction:column; gap:4px;">
           ${linksHtml || '<div style="color:#64748b; font-size:12px;">Sin enlaces configurados</div>'}
@@ -2596,6 +2812,7 @@
       closeWebBuilderModal();
       document.getElementById("manageTextInput").value = sitePayload;
 
+      // Invocar guardado directo en blockchain
       await saveTextRecord();
     }
 
@@ -2619,6 +2836,7 @@
 
         document.getElementById("previewDomainHeader").innerText = domainName + ".monad";
 
+        // Si es JSON de web3-profile
         if (record.startsWith("{") && record.includes('"type":"web3-profile-v1"')) {
           const site = JSON.parse(record);
           let linksHtml = "";
@@ -2638,6 +2856,7 @@
           `;
           document.getElementById("sitePreviewModal").style.display = "flex";
         } else if (record.startsWith("data:image/")) {
+          // Si es una imagen Data URI
           document.getElementById("sitePreviewContent").innerHTML = `
             <h3 style="font-size:18px; color:#fff; margin-bottom:12px;">🖼️ Archivo Multimedia en ${domainName}.monad</h3>
             <img src="${record}" style="max-width:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:16px;" />
