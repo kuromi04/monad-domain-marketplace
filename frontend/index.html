@@ -1536,13 +1536,15 @@
           throw new Error("No se pudo cargar la librería de WalletConnect. Verifica tu conexión a internet.");
         }
 
+        // Configurar Provider con cadenas opcionales para evitar que wallets que aún no tienen Monad por defecto rechacen el handshake
         const wcProvider = await ProviderClass.init({
           projectId: "c4f79cc821944d9680842e34466bfb",
           chains: [10143],
-          optionalChains: [10143],
+          optionalChains: [10143, 1], // Monad Testnet y Ethereum Mainnet como fallback
           showQrModal: false,
           rpcMap: {
-            10143: "https://testnet-rpc.monad.xyz"
+            10143: "https://testnet-rpc.monad.xyz",
+            1: "https://eth.llamarpc.com"
           },
           metadata: {
             name: "Monad Names Marketplace",
@@ -1552,6 +1554,7 @@
           }
         });
 
+        // Manejar display_uri
         wcProvider.on("display_uri", (uri) => {
           currentWcUri = uri;
           qrContainer.innerHTML = "";
@@ -1574,25 +1577,31 @@
           const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
           const mobileLink = document.getElementById("openWalletMobileLink");
           if (mobileLink) {
-            if (isMobile) {
-              mobileLink.style.display = "block";
-              mobileLink.href = uri;
-            } else {
-              mobileLink.style.display = "none";
-            }
+            mobileLink.style.display = isMobile ? "block" : "none";
+            mobileLink.href = uri;
           }
 
           document.getElementById("qrModal").style.display = "flex";
         });
 
-        await wcProvider.enable();
+        // Intentar conectar / habilitar sesiones
+        try {
+          await wcProvider.enable();
+        } catch (enableErr) {
+          if (wcProvider.connect) {
+            await wcProvider.connect();
+          } else {
+            throw enableErr;
+          }
+        }
+
         closeQrModal();
         connectWithProvider(wcProvider, "WalletConnect");
 
       } catch (err) {
         console.error("Error WC:", err);
         closeQrModal();
-        showToast("Error WalletConnect: " + (err.message || err), false);
+        showToast("Error WalletConnect: " + (err.message || "No se pudo conectar con tu billetera"), false);
       }
     }
   
