@@ -7,8 +7,7 @@
   <title>Monad Name Service (.monad) - Web3 Marketplace</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 
-  <!-- WalletConnect / AppKit CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/modal@2.6.2/dist/index.umd.js"></script>
+  <!-- WalletConnect / AppKit CDN con bundle universal compatible con navegador -->
   <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1546,33 +1545,45 @@
       }
 
       try {
-        if (!window.EthereumProvider && !window.WalletConnectEthereumProvider) {
-          await new Promise((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = "https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
-            script.onload = resolve;
-            script.onerror = () => {
-              const alt = document.createElement("script");
-              alt.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
-              alt.onload = resolve;
-              alt.onerror = reject;
-              document.head.appendChild(alt);
-            };
-            document.head.appendChild(script);
-          });
-        }
-
-        const ProviderClass = window.EthereumProvider || 
-                              window.WalletConnectEthereumProvider?.default || 
-                              window.WalletConnectEthereumProvider ||
-                              window["@walletconnect/ethereum-provider"]?.EthereumProvider;
+        // Buscar la clase de WalletConnect en todas las variantes posibles de exportación UMD
+        let ProviderClass = window.EthereumProvider ||
+                            window.WalletConnectEthereumProvider?.default ||
+                            window.WalletConnectEthereumProvider ||
+                            window["@walletconnect/ethereum-provider"]?.EthereumProvider ||
+                            window["@walletconnect/ethereum-provider"]?.default;
 
         if (!ProviderClass) {
-          throw new Error("No se pudo cargar la librería de WalletConnect. Verifica tu conexión a internet.");
+          // Intentar cargar dinámicamente un bundle alternativo
+          await new Promise((resolve) => {
+            const script = document.createElement("script");
+            script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
+            script.onload = resolve;
+            script.onerror = resolve;
+            document.head.appendChild(script);
+          });
+
+          ProviderClass = window.EthereumProvider ||
+                          window.WalletConnectEthereumProvider?.default ||
+                          window.WalletConnectEthereumProvider ||
+                          window["@walletconnect/ethereum-provider"]?.EthereumProvider ||
+                          window["@walletconnect/ethereum-provider"]?.default;
         }
 
-        // Configurar Provider con chainId 1 (Ethereum) en chains y 10143 (Monad) en optionalChains
-        // Esto evita que wallets como MetaMask/Trust fallen con 'no se pudo transmitir la info / Unrecognized chain'
+        if (!ProviderClass) {
+          closeQrModal();
+          showToast("Abriendo navegador Web3 de tu billetera...", true);
+          // Si el navegador bloquea scripts externos de WalletConnect, redirigir directo a la app Web3
+          const currentUrl = window.location.href.replace(/^https?:\/\//, "");
+          const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          if (isMobile) {
+            window.location.href = "https://metamask.app.link/dapp/" + currentUrl;
+          } else {
+            showToast("Usa una extensión como MetaMask o Rabby, o abre el link dentro de MetaMask/Trust Mobile", false);
+          }
+          return;
+        }
+
+        // Configurar Provider con cadenas opcionales compatibles
         const wcProvider = await ProviderClass.init({
           projectId: "c4f79cc821944d9680842e34466bfb",
           chains: [1],
@@ -1637,7 +1648,14 @@
       } catch (err) {
         console.error("Error WC:", err);
         closeQrModal();
-        showToast("Error WalletConnect: " + (err.message || "No se pudo conectar con tu billetera"), false);
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+          showToast("Redirigiendo a tu app MetaMask...", true);
+          const currentUrl = window.location.href.replace(/^https?:\/\//, "");
+          window.location.href = "https://metamask.app.link/dapp/" + currentUrl;
+        } else {
+          showToast("Error de conexión: " + (err.message || "Verifica tu conexión"), false);
+        }
       }
     }
   
