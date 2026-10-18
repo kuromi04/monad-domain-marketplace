@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#07070d"/>
+      <stop offset="50%" stop-color="#121324"/>
+      <stop offset="100%" stop-color="#0a0a14"/>
+    </linearGradient>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#836ef9"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#836ef9" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.6"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="25" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="400" fill="url(#bgGrad)"/>
+
+  <!-- Background decorative glowing circles -->
+  <circle cx="150" cy="80" r="140" fill="#836ef9" opacity="0.12" filter="url(#glow)"/>
+  <circle cx="1050" cy="300" r="160" fill="#06b6d4" opacity="0.12" filter="url(#glow)"/>
+  <circle cx="600" cy="200" r="220" fill="#a855f7" opacity="0.08" filter="url(#glow)"/>
+
+  <!-- Grid lines -->
+  <path d="M 0 100 L 1200 100 M 0 200 L 1200 200 M 0 300 L 1200 300" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+  <path d="M 200 0 L 200 400 M 400 0 L 400 400 M 600 0 L 600 400 M 800 0 L 800 400 M 1000 0 L 1000 400" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+
+  <!-- Main Logo Emblem -->
+  <g transform="translate(100, 100)">
+    <!-- Outer hexagonal glow ring -->
+    <rect x="0" y="0" width="200" height="200" rx="44" fill="#171929" stroke="url(#brandGrad)" stroke-width="4" filter="url(#glow)"/>
+    <!-- Inner sphere icon -->
+    <circle cx="100" cy="100" r="54" fill="url(#brandGrad)"/>
+    <!-- Letter M inside emblem -->
+    <path d="M 72 125 L 72 75 L 100 102 L 128 75 L 128 125" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Title & Typography -->
+  <g transform="translate(340, 140)">
+    <!-- Main Title -->
+    <text x="0" y="30" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="52" font-weight="900" fill="#ffffff" letter-spacing="-1.5">
+      Monad Names <tspan fill="url(#brandGrad)">.monad</tspan>
+    </text>
+
+    <!-- Subtitle -->
+    <text x="0" y="80" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="21" font-weight="600" fill="#94a3b8" letter-spacing="-0.3">
+      Web3 Domain Registrar, On-Chain Identity &amp; Native Marketplace
+    </text>
+
+    <!-- Badges in banner -->
+    <g transform="translate(0, 115)">
+      <!-- Badge 1: Monad Testnet -->
+      <rect x="0" y="0" width="175" height="36" rx="10" fill="rgba(131, 110, 249, 0.15)" stroke="#836ef9" stroke-width="1.5"/>
+      <text x="87" y="23" font-family="sans-serif" font-size="13" font-weight="700" fill="#c4b5fd" text-anchor="middle">⚡ Monad Testnet 10143</text>
+
+      <!-- Badge 2: ERC-721 NFT -->
+      <rect x="190" y="0" width="135" height="36" rx="10" fill="rgba(6, 182, 212, 0.15)" stroke="#06b6d4" stroke-width="1.5"/>
+      <text x="257" y="23" font-family="sans-serif" font-size="13" font-weight="700" fill="#67e8f9" text-anchor="middle">💎 ERC-721 SVG</text>
+
+      <!-- Badge 3: Termux Made -->
+      <rect x="340" y="0" width="220" height="36" rx="10" fill="rgba(16, 185, 129, 0.15)" stroke="#10b981" stroke-width="1.5"/>
+      <text x="450" y="23" font-family="sans-serif" font-size="13" font-weight="700" fill="#34d399" text-anchor="middle">📱 Built in Termux by kuromi04</text>
+    </g>
+  </g>
+
+  <!-- Decorative border line at the bottom -->
+  <rect x="0" y="394" width="1200" height="6" fill="url(#brandGrad)"/>
+</svg>

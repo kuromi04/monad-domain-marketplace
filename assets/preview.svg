@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bgD" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0b16"/>
+      <stop offset="100%" stop-color="#14162b"/>
+    </linearGradient>
+    <linearGradient id="domainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#836ef9"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="12" stdDeviation="15" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <rect width="800" height="500" rx="20" fill="url(#bgD)"/>
+
+  <!-- Top bar browser mockup -->
+  <rect x="0" y="0" width="800" height="42" fill="#1b1d30"/>
+  <circle cx="25" cy="21" r="6" fill="#f87171"/>
+  <circle cx="45" cy="21" r="6" fill="#fbbf24"/>
+  <circle cx="65" cy="21" r="6" fill="#34d399"/>
+  <rect x="120" y="10" width="560" height="22" rx="6" fill="#0c0e1a"/>
+  <text x="400" y="26" font-family="monospace" font-size="12" fill="#94a3b8" text-anchor="middle">https://kuromi04.github.io/monad-domain-marketplace/</text>
+
+  <!-- Content representation -->
+  <!-- Header representation -->
+  <text x="400" y="95" font-family="system-ui, sans-serif" font-size="28" font-weight="800" fill="#ffffff" text-anchor="middle">
+    Tu Identidad Web3 en <tspan fill="url(#domainGrad)">Monad</tspan>
+  </text>
+  <text x="400" y="125" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">
+    Registra dominios .monad, transfórmalos en sitios Web3 y recibe transferencias al instante
+  </text>
+
+  <!-- Search bar mock -->
+  <rect x="150" y="150" width="500" height="50" rx="14" fill="#171928" stroke="#836ef9" stroke-width="2"/>
+  <text x="180" y="181" font-family="sans-serif" font-size="16" fill="#f8fafc">kuromi04</text>
+  <rect x="530" y="158" width="110" height="34" rx="8" fill="url(#domainGrad)"/>
+  <text x="585" y="180" font-family="sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">Buscar .monad</text>
+
+  <!-- Cards Mockup -->
+  <!-- Card 1: Domain Card -->
+  <g transform="translate(150, 225)" filter="url(#shadow)">
+    <rect width="235" height="230" rx="16" fill="#161829" stroke="rgba(131,110,249,0.3)"/>
+    <rect x="15" y="15" width="205" height="110" rx="12" fill="url(#domainGrad)"/>
+    <text x="117" y="65" font-family="sans-serif" font-size="20" font-weight="800" fill="#ffffff" text-anchor="middle">kuromi04.monad</text>
+    <text x="117" y="90" font-family="sans-serif" font-size="11" font-weight="700" fill="rgba(255,255,255,0.85)" text-anchor="middle">TOKEN ID #keccak256</text>
+    <text x="20" y="155" font-family="sans-serif" font-size="13" font-weight="700" fill="#ffffff">Dominio Registrado</text>
+    <text x="20" y="175" font-family="sans-serif" font-size="11" fill="#34d399">● Resuelve a tu wallet</text>
+    <rect x="20" y="190" width="195" height="26" rx="6" fill="#242842"/>
+    <text x="117" y="207" font-family="sans-serif" font-size="11" font-weight="600" fill="#c4b5fd" text-anchor="middle">Constructor Web3 &amp; DNS</text>
+  </g>
+
+  <!-- Card 2: Send MON Card -->
+  <g transform="translate(415, 225)" filter="url(#shadow)">
+    <rect width="235" height="230" rx="16" fill="#161829" stroke="rgba(6,182,212,0.3)"/>
+    <rect x="20" y="20" width="40" height="40" rx="10" fill="rgba(16,185,129,0.15)"/>
+    <text x="40" y="46" font-size="20" text-anchor="middle">💸</text>
+    <text x="75" y="44" font-family="sans-serif" font-size="15" font-weight="800" fill="#ffffff">Enviar a .monad</text>
+
+    <rect x="20" y="75" width="195" height="34" rx="8" fill="#1e2137"/>
+    <text x="32" y="97" font-family="sans-serif" font-size="12" fill="#94a3b8">Destino: kuromi04.monad</text>
+
+    <rect x="20" y="120" width="195" height="34" rx="8" fill="#1e2137"/>
+    <text x="32" y="142" font-family="sans-serif" font-size="12" fill="#94a3b8">Monto: 1.5 MON</text>
+
+    <rect x="20" y="175" width="195" height="36" rx="8" fill="linear-gradient(135deg, #10b981, #059669)"/>
+    <text x="117" y="198" font-family="sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">Enviar MON Ahora 🚀</text>
+  </g>
+</svg>
