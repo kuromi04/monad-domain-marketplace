@@ -1087,6 +1087,7 @@
         const tx = await registry.register(term, { value: ethers.parseEther("1.0") });
         showToast("Transacción enviada, confirmando...", true);
         await tx.wait();
+        addTrackedDomain(term);
         showToast(`¡Felicidades! ${term}.monad es tuyo.`);
         checkDomainAvailability();
       } catch (e) {
@@ -1145,6 +1146,7 @@
         const listTx = await marketplace.listDomain(tokenId, ethers.parseEther(price));
         await listTx.wait();
 
+        addTrackedDomain(name);
         showToast(`🎉 ¡${name}.monad listado exitosamente por ${price} MON!`);
         document.getElementById("sellNameInput").value = "";
         document.getElementById("sellPriceInput").value = "";
@@ -1153,6 +1155,120 @@
       } catch (e) {
         console.error(e);
         showToast("Error: " + (e.reason || e.message), false);
+      }
+    }
+
+    
+    // Lista predeterminada de nombres para tracking en la red de pruebas
+    const KNOWN_DOMAINS = ["andresch", "monadgod", "alpha", "defi", "satoshi", "vitalik", "monad", "crypto", "nft", "kuromi"];
+
+    function getTrackedDomains() {
+      try {
+        const stored = JSON.parse(localStorage.getItem("monad_tracked_domains") || "[]");
+        return Array.from(new Set([...KNOWN_DOMAINS, ...stored]));
+      } catch (e) {
+        return KNOWN_DOMAINS;
+      }
+    }
+
+    function addTrackedDomain(name) {
+      try {
+        const clean = name.replace(/^@/, "").replace(/\.monad$/, "").trim().toLowerCase();
+        const current = getTrackedDomains();
+        if (!current.includes(clean)) {
+          current.push(clean);
+          localStorage.setItem("monad_tracked_domains", JSON.stringify(current));
+        }
+      } catch (e) {}
+    }
+
+    async function loadActiveListings() {
+      const grid = document.getElementById("marketplaceGrid");
+      if (!grid) return;
+
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+          <div style="display:inline-block; width:28px; height:28px; border:3px solid rgba(131,110,249,0.3); border-top-color:#836ef9; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:12px;"></div>
+          <p>Consultando dominios en venta en Monad...</p>
+        </div>
+      `;
+
+      try {
+        const rpc = new ethers.JsonRpcProvider("https://testnet-rpc.monad.xyz");
+        const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, [
+          "function listings(uint256) view returns (address seller, uint256 price, bool isActive)"
+        ], rpc);
+
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, [
+          "function computeTokenId(string) pure returns (uint256)",
+          "function domains(uint256) view returns (string name, address resolvedAddress, uint256 registeredAt, uint256 expiresAt, string textRecord)",
+          "function ownerOf(uint256) view returns (address)"
+        ], rpc);
+
+        const trackedNames = getTrackedDomains();
+        const activeCards = [];
+
+        for (const name of trackedNames) {
+          try {
+            const tokenId = await registry.computeTokenId(name);
+            const listing = await marketplace.listings(tokenId);
+
+            if (listing.isActive) {
+              const priceInMon = ethers.formatEther(listing.price);
+              activeCards.push({
+                tokenId: tokenId.toString(),
+                name: name,
+                price: priceInMon,
+                seller: listing.seller
+              });
+            }
+          } catch (e) {
+            // Token no listado o error en llamada individual
+          }
+        }
+
+        if (activeCards.length === 0) {
+          grid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 48px 24px; background: var(--bg-card); border-radius: 20px; border: 1px dashed var(--border);">
+              <div style="font-size: 38px; margin-bottom: 12px;">🏷️</div>
+              <p style="font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 8px;">No hay dominios en venta en este momento</p>
+              <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 22px;">¡Sé el primero en registrar un dominio y ponerlo a la venta en el Marketplace!</p>
+              <button class="btn-action-primary" style="max-width: 260px; margin: 0 auto; display: block;" onclick="switchTab('sell')">Poner un dominio en venta</button>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = "";
+        for (const item of activeCards) {
+          const card = document.createElement("div");
+          card.className = "domain-card";
+          card.innerHTML = `
+            <div>
+              <div class="card-top">
+                <div class="domain-avatar">🟣</div>
+                <div>
+                  <div class="domain-name">${item.name}.monad</div>
+                  <small style="color: var(--text-muted)">Vendedor: ${item.seller.slice(0,6)}...${item.seller.slice(38)}</small>
+                </div>
+              </div>
+              <div class="card-price-box">
+                <span class="card-price-label">Precio</span>
+                <span class="card-price-val">${item.price} MON</span>
+              </div>
+            </div>
+            <button class="btn-buy" onclick="buyRealDomain('${item.tokenId}', '${item.price}', '${item.name}')">Comprar Dominio</button>
+          `;
+          grid.appendChild(card);
+        }
+      } catch (err) {
+        console.error("Error cargando listados reales:", err);
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #f87171;">
+            <p>Error conectando con la red Monad: ${err.message || err}</p>
+            <button class="btn-buy" style="max-width:180px; margin:16px auto 0;" onclick="loadActiveListings()">Reintentar</button>
+          </div>
+        `;
       }
     }
 
@@ -1179,43 +1295,45 @@
       try {
         const rpc = new ethers.JsonRpcProvider("https://testnet-rpc.monad.xyz");
         const registry = new ethers.Contract(REGISTRY_ADDRESS, [
-          "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+          "function computeTokenId(string) pure returns (uint256)",
           "function ownerOf(uint256) view returns (address)",
-          "function domains(uint256) view returns (string name, address resolvedAddress, uint256 registeredAt, uint256 expiresAt, string textRecord)"
+          "function domains(uint256) view returns (string name, address resolvedAddress, uint256 registeredAt, uint256 expiresAt, string textRecord)",
+          "function primaryDomain(address) view returns (string)"
         ], rpc);
 
-        // Obtener eventos Transfer donde 'to' sea el usuario actual
-        const filter = registry.filters.Transfer(null, userAddress);
-        const events = await registry.queryFilter(filter, -10000);
-
-        const uniqueTokenIds = new Set();
-        events.forEach(ev => {
-          if (ev.args && ev.args.tokenId) {
-            uniqueTokenIds.add(ev.args.tokenId.toString());
+        const tracked = getTrackedDomains();
+        
+        // Obtener dominio primario si existe
+        try {
+          const prim = await registry.primaryDomain(userAddress);
+          if (prim && prim.length > 0) {
+            addTrackedDomain(prim);
+            tracked.push(prim);
           }
-        });
+        } catch(e) {}
 
-        // Filtrar aquellos donde el usuario aún sea el titular
         const myDomains = [];
-        for (const tid of uniqueTokenIds) {
+        const checkedNames = new Set(tracked);
+
+        for (const domName of checkedNames) {
           try {
+            const tid = await registry.computeTokenId(domName);
             const currentOwner = await registry.ownerOf(tid);
             if (currentOwner.toLowerCase() === userAddress.toLowerCase()) {
               const dInfo = await registry.domains(tid);
-              const domainName = dInfo.name || "Dominio #" + tid.slice(0, 6);
-              myDomains.push({ tokenId: tid, name: domainName, expiresAt: dInfo.expiresAt });
+              myDomains.push({ tokenId: tid.toString(), name: domName, expiresAt: dInfo.expiresAt });
             }
-          } catch (e) {
-            // El token pudo ser transferido o quemado
+          } catch(e) {
+            // Dominio no acuñado o sin dueño
           }
         }
 
         if (myDomains.length === 0) {
           container.innerHTML = `
-            <div style="text-align: center; padding: 40px; background: var(--card-bg); border-radius: 16px; border: 1px dashed var(--card-border);">
-              <p style="font-size: 18px; color: #fff; margin-bottom: 8px;">No tienes dominios en esta billetera</p>
-              <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Registra uno nuevo o compra uno en el marketplace.</p>
-              <button class="btn-action-primary" style="max-width: 240px; margin: 0 auto; display: block;" onclick="switchTab('explore')">Ir al Marketplace</button>
+            <div style="text-align: center; padding: 40px; background: var(--bg-card); border-radius: 16px; border: 1px dashed var(--border);">
+              <p style="font-size: 18px; color: #fff; margin-bottom: 8px;">No se encontraron dominios para ${userAddress.slice(0,6)}...${userAddress.slice(38)}</p>
+              <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Registra uno nuevo en el buscador o vende un nombre directamente.</p>
+              <button class="btn-action-primary" style="max-width: 240px; margin: 0 auto; display: block;" onclick="switchTab('sell')">Poner nombre en venta</button>
             </div>
           `;
           return;
@@ -1238,7 +1356,7 @@
                   <span class="card-price-val" style="color:#34d399; font-size: 14px;">En tu poder</span>
                 </div>
               </div>
-              <button class="btn-buy" style="background:#8b5cf6;" onclick="prepareSellDomain('${dom.name}')">Poner en Venta</button>
+              <button class="btn-buy" style="background:var(--gradient-btn);" onclick="prepareSellDomain('${dom.name}')">Poner en Venta</button>
             </div>
           `;
         }
@@ -1251,74 +1369,6 @@
             Error cargando tus dominios: ${err.message || err}
           </div>
         `;
-      }
-    }
-
-    
-    async function loadActiveListings() {
-      const grid = document.getElementById("marketplaceGrid");
-      if (!grid) return;
-
-      try {
-        const rpc = new ethers.JsonRpcProvider("https://testnet-rpc.monad.xyz");
-        const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, [
-          "event ItemListed(uint256 indexed tokenId, address indexed seller, uint256 price)",
-          "event ItemSold(uint256 indexed tokenId, address indexed buyer, address indexed seller, uint256 price)",
-          "event ListingCancelled(uint256 indexed tokenId, address indexed seller)",
-          "function listings(uint256) view returns (address seller, uint256 price, bool isActive)"
-        ], rpc);
-
-        const registry = new ethers.Contract(REGISTRY_ADDRESS, [
-          "function domains(uint256) view returns (string name, address resolvedAddress, uint256 registeredAt, uint256 expiresAt, string textRecord)"
-        ], rpc);
-
-        // Consultar eventos de listado
-        const filter = marketplace.filters.ItemListed();
-        const events = await marketplace.queryFilter(filter, -5000); // últimos bloques
-
-        if (events.length === 0) {
-          grid.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: var(--card-bg); border-radius: 16px; border: 1px dashed var(--card-border);">
-              <p style="font-size: 18px; color: #fff; margin-bottom: 8px;">No hay dominios en venta en este momento</p>
-              <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">¡Sé el primero en registrar un dominio y ponerlo a la venta!</p>
-              <button class="btn-action-primary" style="max-width: 240px; margin: 0 auto; display: block;" onclick="switchTab('sell')">Poner un dominio en venta</button>
-            </div>
-          `;
-          return;
-        }
-
-        grid.innerHTML = "";
-        for (const ev of events) {
-          const tokenId = ev.args.tokenId;
-          const listing = await marketplace.listings(tokenId);
-          if (listing.isActive) {
-            const domainInfo = await registry.domains(tokenId);
-            const domainName = domainInfo.name || "Dominio #" + tokenId.toString().slice(0, 6);
-            const priceInMon = ethers.formatEther(listing.price);
-
-            const card = document.createElement("div");
-            card.className = "domain-card";
-            card.innerHTML = `
-              <div>
-                <div class="card-top">
-                  <div class="domain-avatar">🟣</div>
-                  <div>
-                    <div class="domain-name">${domainName}.monad</div>
-                    <small style="color: var(--text-muted)">Vendedor: ${listing.seller.slice(0,6)}...${listing.seller.slice(38)}</small>
-                  </div>
-                </div>
-                <div class="card-price-box">
-                  <span class="card-price-label">Precio</span>
-                  <span class="card-price-val">${priceInMon} MON</span>
-                </div>
-              </div>
-              <button class="btn-buy" onclick="buyRealDomain('${tokenId}', '${priceInMon}', '${domainName}')">Comprar Dominio</button>
-            `;
-            grid.appendChild(card);
-          }
-        }
-      } catch (err) {
-        console.error("Error cargando listados reales:", err);
       }
     }
 
@@ -1335,6 +1385,7 @@
         showToast("Transacción enviada, confirmando...", true);
         await tx.wait();
         showToast(`🎉 ¡Compraste ${name}.monad exitosamente!`, true);
+        addTrackedDomain(name);
         loadActiveListings();
       } catch (e) {
         console.error(e);
@@ -1342,26 +1393,10 @@
       }
     }
 
-    async function quickBuy(name, price) {
-      if (!signer) {
-        await connectWallet();
-        if (!signer) return;
-      }
-
-      try {
-        showToast(`Comprando ${name}.monad por ${price} MON...`, true);
-        const registry = new ethers.Contract(REGISTRY_ADDRESS, contractsData.registry.abi, signer);
-        const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, contractsData.marketplace.abi, signer);
-        const tokenId = await registry.computeTokenId(name);
-
-        const buyTx = await marketplace.buyDomain(tokenId, { value: ethers.parseEther(price.toString()) });
-        await buyTx.wait();
-        showToast(`¡Compraste ${name}.monad con éxito!`);
-      } catch (e) {
-        console.error(e);
-        showToast("Error: " + (e.reason || e.message), false);
-      }
-    }
+    // Inicializar al cargar la página
+    window.addEventListener("DOMContentLoaded", () => {
+      loadActiveListings();
+    });
   </script>
 </body>
 </html>
