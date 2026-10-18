@@ -1143,6 +1143,7 @@
 
     <div class="nav-links">
       <a class="nav-link active" onclick="switchTab('explore')">Marketplace</a>
+      <a class="nav-link" onclick="switchTab('transfer')">💸 Enviar a Dominio</a>
       <a class="nav-link" onclick="switchTab('sell')">Vender Dominio</a>
       <a class="nav-link" onclick="switchTab('my-domains')">Mis Dominios</a>
       <a class="nav-link" href="#toolsSection">Herramientas Web3</a>
@@ -1240,6 +1241,7 @@
   <!-- Pestañas de Navegación -->
   <div class="tabs-nav">
     <button class="tab-btn active" onclick="switchTab('explore')">Explorar Marketplace</button>
+    <button class="tab-btn" onclick="switchTab('transfer')">💸 Enviar a Dominio</button>
     <button class="tab-btn" onclick="switchTab('sell')">Poner en Venta</button>
     <button class="tab-btn" onclick="switchTab('my-domains')">Mis Dominios</button>
   </div>
@@ -1250,6 +1252,45 @@
       <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
         Cargando dominios en venta...
       </div>
+    </div>
+  </section>
+
+  <!-- Sección: Enviar Fondos a Dominio .monad -->
+  <section id="tab-transfer" class="section-container" style="display: none;">
+    <div class="sell-box" style="max-width: 540px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 38px; margin-bottom: 10px;">💸</div>
+        <h2 style="font-size: 24px; margin-bottom: 6px;">Enviar Fondos a un Dominio .monad</h2>
+        <p style="color: var(--text-muted); font-size: 14px;">
+          Escribe el nombre del dominio (ej. <code>satoshi</code> o <code>satoshi.monad</code>). El contrato resolverá su billetera automáticamente para transferirle MON al instante.
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label>Dominio Destino (.monad)</label>
+        <div style="position: relative;">
+          <input type="text" id="transferDomainInput" placeholder="ej. satoshi" oninput="resolveTransferDestination()" />
+          <span style="position: absolute; right: 16px; top: 14px; font-weight: 700; color: var(--monad-cyan);">.monad</span>
+        </div>
+      </div>
+
+      <!-- Caja de Resolución en Tiempo Real -->
+      <div id="transferResolutionBox" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px; margin-bottom: 18px; font-size: 13px; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span style="color: var(--text-muted);">Dirección Resuelta:</span>
+          <span id="transferBadgeStatus" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 700;"></span>
+        </div>
+        <div id="transferResolvedAddress" style="font-family: monospace; color: #fff; word-break: break-all; font-weight: 600;"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Cantidad de MON a Enviar</label>
+        <input type="number" id="transferAmountInput" step="0.001" min="0.0001" placeholder="ej. 0.5" />
+      </div>
+
+      <button id="btnSendMon" class="btn-action-primary" style="background: linear-gradient(135deg, #10b981, #059669);" onclick="executeTransferToDomain()">
+        Enviar MON Ahora 🚀
+      </button>
     </div>
   </section>
 
@@ -1426,18 +1467,125 @@
 
     function switchTab(tabId, el) {
       document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".nav-link").forEach(btn => btn.classList.remove("active"));
+
       if (el) {
         el.classList.add("active");
       } else {
-        const targetBtn = Array.from(document.querySelectorAll(".tab-btn")).find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes(`'${tabId}'`));
+        const targetBtn = Array.from(document.querySelectorAll(".tab-btn, .nav-link")).find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes(`'${tabId}'`));
         if (targetBtn) targetBtn.classList.add("active");
       }
 
       document.getElementById("tab-explore").style.display = tabId === 'explore' ? 'block' : 'none';
+      document.getElementById("tab-transfer").style.display = tabId === 'transfer' ? 'block' : 'none';
       document.getElementById("tab-sell").style.display = tabId === 'sell' ? 'block' : 'none';
       document.getElementById("tab-my-domains").style.display = tabId === 'my-domains' ? 'block' : 'none';
+
       if (tabId === 'my-domains') loadMyDomains();
       if (tabId === 'explore') loadActiveListings();
+    }
+
+    let resolvedTransferTarget = "";
+
+    async function resolveTransferDestination() {
+      const raw = document.getElementById("transferDomainInput").value.trim().toLowerCase();
+      const cleanName = raw.replace(/^@/, "").replace(/\.monad$/, "").trim();
+
+      const box = document.getElementById("transferResolutionBox");
+      const badge = document.getElementById("transferBadgeStatus");
+      const addressLabel = document.getElementById("transferResolvedAddress");
+
+      if (!cleanName || cleanName.length < 3) {
+        box.style.display = "none";
+        resolvedTransferTarget = "";
+        return;
+      }
+
+      box.style.display = "block";
+      badge.innerText = "Buscando...";
+      badge.style.background = "rgba(131,110,249,0.2)";
+      badge.style.color = "#c4b5fd";
+      addressLabel.innerText = "Consultando registro en Monad...";
+
+      try {
+        const rpc = new ethers.JsonRpcProvider("https://testnet-rpc.monad.xyz");
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, [
+          "function computeTokenId(string) pure returns (uint256)",
+          "function domains(uint256) view returns (string name, address resolvedAddress, uint256 registeredAt, uint256 expiresAt, string textRecord)",
+          "function ownerOf(uint256) view returns (address)"
+        ], rpc);
+
+        const tokenId = await registry.computeTokenId(cleanName);
+        const domainData = await registry.domains(tokenId);
+
+        if (domainData.resolvedAddress && domainData.resolvedAddress !== ethers.ZeroAddress) {
+          resolvedTransferTarget = domainData.resolvedAddress;
+          badge.innerText = "Resuelto";
+          badge.style.background = "rgba(16,185,129,0.2)";
+          badge.style.color = "#34d399";
+          addressLabel.innerText = domainData.resolvedAddress;
+        } else {
+          // Si no tiene resolvedAddress explícito, consultar al dueño del NFT
+          const owner = await registry.ownerOf(tokenId);
+          resolvedTransferTarget = owner;
+          badge.innerText = "Titular NFT";
+          badge.style.background = "rgba(6,182,212,0.2)";
+          badge.style.color = "#06b6d4";
+          addressLabel.innerText = owner;
+        }
+      } catch (e) {
+        resolvedTransferTarget = "";
+        badge.innerText = "No Registrado";
+        badge.style.background = "rgba(248,113,113,0.2)";
+        badge.style.color = "#f87171";
+        addressLabel.innerText = "Este dominio aún no está registrado en Monad.";
+      }
+    }
+
+    async function executeTransferToDomain() {
+      if (!signer) {
+        openWalletModal();
+        return;
+      }
+
+      const domainName = document.getElementById("transferDomainInput").value.trim();
+      const amount = document.getElementById("transferAmountInput").value.trim();
+
+      if (!resolvedTransferTarget || !ethers.isAddress(resolvedTransferTarget)) {
+        showToast("Primero ingresa un dominio .monad registrado válido", false);
+        return;
+      }
+
+      if (!amount || parseFloat(amount) <= 0) {
+        showToast("Ingresa un monto válido de MON para transferir", false);
+        return;
+      }
+
+      const btn = document.getElementById("btnSendMon");
+      const prevText = btn.innerText;
+      try {
+        btn.innerText = "Firmando en Wallet...";
+        btn.disabled = true;
+
+        showToast(`Enviando ${amount} MON a ${domainName} (${resolvedTransferTarget.slice(0,6)}...)...`, true);
+
+        const tx = await signer.sendTransaction({
+          to: resolvedTransferTarget,
+          value: ethers.parseEther(amount)
+        });
+
+        showToast("Transacción enviada a Monad, esperando confirmación...", true);
+        await tx.wait();
+
+        showToast(`🎉 ¡Transferencia de ${amount} MON exitosa a ${domainName}!`);
+        document.getElementById("transferAmountInput").value = "";
+      } catch (err) {
+        console.error(err);
+        showToast("Error en transferencia: " + (err.reason || err.message), false);
+      } finally {
+        btn.innerText = prevText;
+        btn.disabled = false;
+      }
     }
 
     
