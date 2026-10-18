@@ -1528,6 +1528,8 @@
       });
     })();
 
+    let cachedWcProvider = null;
+
     async function connectWalletConnect() {
       closeWalletModal();
       showToast("Iniciando WalletConnect...", true);
@@ -1544,6 +1546,8 @@
         document.getElementById("qrModal").style.display = "flex";
       }
 
+      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+
       try {
         // Buscar la clase de WalletConnect en todas las variantes posibles de exportación UMD
         let ProviderClass = window.EthereumProvider ||
@@ -1553,7 +1557,6 @@
                             window["@walletconnect/ethereum-provider"]?.default;
 
         if (!ProviderClass) {
-          // Intentar cargar dinámicamente un bundle alternativo
           await new Promise((resolve) => {
             const script = document.createElement("script");
             script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
@@ -1571,35 +1574,49 @@
 
         if (!ProviderClass) {
           closeQrModal();
-          showToast("Abriendo navegador Web3 de tu billetera...", true);
-          // Si el navegador bloquea scripts externos de WalletConnect, redirigir directo a la app Web3
-          const currentUrl = window.location.href.replace(/^https?:\/\//, "");
-          const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
           if (isMobile) {
+            showToast("Abriendo en MetaMask App...", true);
+            const currentUrl = window.location.href.replace(/^https?:\/\//, "");
             window.location.href = "https://metamask.app.link/dapp/" + currentUrl;
           } else {
-            showToast("Usa una extensión como MetaMask o Rabby, o abre el link dentro de MetaMask/Trust Mobile", false);
+            showToast("Instala MetaMask o abre esta web en el navegador de MetaMask / Trust", false);
           }
           return;
         }
 
-        // Configurar Provider con cadenas opcionales compatibles
-        const wcProvider = await ProviderClass.init({
-          projectId: "c4f79cc821944d9680842e34466bfb",
-          chains: [1],
-          optionalChains: [10143],
-          showQrModal: false,
-          rpcMap: {
-            1: "https://eth.llamarpc.com",
-            10143: "https://testnet-rpc.monad.xyz"
-          },
-          metadata: {
-            name: "Monad Names Marketplace",
-            description: "Marketplace de dominios .monad",
-            url: window.location.origin,
-            icons: ["https://docs.monad.xyz/favicon.ico"]
-          }
-        });
+        // Si ya hay un proveedor previo creado, reutilizarlo o desconectar sesión previa estancada
+        if (!cachedWcProvider) {
+          cachedWcProvider = await ProviderClass.init({
+            projectId: "c4f79cc821944d9680842e34466bfb",
+            chains: [1],
+            optionalChains: [10143],
+            showQrModal: false,
+            rpcMap: {
+              1: "https://eth.llamarpc.com",
+              10143: "https://testnet-rpc.monad.xyz"
+            },
+            metadata: {
+              name: "Monad Names Marketplace",
+              description: "Marketplace de dominios .monad",
+              url: window.location.origin,
+              icons: ["https://docs.monad.xyz/favicon.ico"]
+            }
+          });
+        }
+
+        const wcProvider = cachedWcProvider;
+
+        // Limpiar sesiones previas si están colgadas
+        if (wcProvider.session && !wcProvider.accounts?.length) {
+          try { await wcProvider.disconnect(); } catch(e) {}
+        }
+
+        // Si ya tiene cuentas conectadas activas de antes
+        if (wcProvider.accounts && wcProvider.accounts.length > 0) {
+          closeQrModal();
+          connectWithProvider(wcProvider, "WalletConnect");
+          return;
+        }
 
         // Manejar display_uri
         wcProvider.on("display_uri", (uri) => {
@@ -1621,7 +1638,6 @@
             `;
           }
 
-          const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
           const mobileLink = document.getElementById("openWalletMobileLink");
           if (mobileLink) {
             mobileLink.style.display = isMobile ? "block" : "none";
@@ -1631,12 +1647,12 @@
           document.getElementById("qrModal").style.display = "flex";
         });
 
-        // Intentar conectar / habilitar sesiones
+        // Conectar
         try {
-          await wcProvider.enable();
+          await wcProvider.connect();
         } catch (enableErr) {
-          if (wcProvider.connect) {
-            await wcProvider.connect();
+          if (wcProvider.enable) {
+            await wcProvider.enable();
           } else {
             throw enableErr;
           }
@@ -1648,13 +1664,12 @@
       } catch (err) {
         console.error("Error WC:", err);
         closeQrModal();
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         if (isMobile) {
           showToast("Redirigiendo a tu app MetaMask...", true);
           const currentUrl = window.location.href.replace(/^https?:\/\//, "");
           window.location.href = "https://metamask.app.link/dapp/" + currentUrl;
         } else {
-          showToast("Error de conexión: " + (err.message || "Verifica tu conexión"), false);
+          showToast("Conexión cancelada o rechazada. Reintenta o escanea el QR.", false);
         }
       }
     }
