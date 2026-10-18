@@ -1029,6 +1029,77 @@
     </div>
   </div>
 
+  <!-- Modal Administrar Dominio (Resolución, Registros de Texto / IPFS, Dominio Primario) -->
+  <div id="manageDomainModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10001; backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#171926; border:1px solid rgba(131,110,249,0.35); border-radius:24px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; padding:28px; box-shadow:0 25px 60px rgba(0,0,0,0.95); position:relative;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:38px; height:38px; border-radius:12px; background:rgba(131,110,249,0.2); display:flex; align-items:center; justify-content:center; font-size:20px;">⚙️</div>
+          <div>
+            <h3 id="manageModalTitle" style="margin:0; font-size:18px; color:#fff;">Administrar Dominio</h3>
+            <span id="manageModalSubtitle" style="font-size:12px; color:var(--monad-cyan);">Configuración en Blockchain</span>
+          </div>
+        </div>
+        <button onclick="closeManageModal()" style="background:none; border:none; color:#94a3b8; font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Pestaña Informativa Rápida -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:14px; margin-bottom:20px; font-size:13px; color:#94a3b8; line-height:1.5;">
+        Configura la billetera vinculada para recibir fondos en <strong id="manageDomainBadge" style="color:#fff;"></strong>, asigna tu web descentralizada o redes, o establécelo como tu identidad principal.
+      </div>
+
+      <!-- 1. Billetera de Resolución (setResolvedAddress) -->
+      <div style="margin-bottom:22px;">
+        <label style="display:block; font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">
+          💳 Dirección de Billetera Vinculada (Recibir Pagos)
+        </label>
+        <span style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:8px;">
+          Cuando alguien te envíe MON o tokens a este dominio, se enviarán a esta dirección:
+        </span>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="manageAddressInput" placeholder="0x..." style="flex:1; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px 14px; color:#fff; font-size:13px; font-family:monospace;" />
+          <button onclick="fillMyAddress()" style="background:rgba(131,110,249,0.2); border:1px solid #836ef9; color:#c4b5fd; padding:0 14px; border-radius:12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">
+            Mi Wallet
+          </button>
+        </div>
+        <button id="btnSaveAddress" class="btn-action-primary" style="margin-top:10px; padding:10px; font-size:13px; border-radius:10px;" onclick="saveResolvedAddress()">
+          Actualizar Dirección de Pago
+        </button>
+      </div>
+
+      <div style="border-top:1px dashed rgba(255,255,255,0.1); margin:18px 0;"></div>
+
+      <!-- 2. Registros de Texto / IPFS / Web (setTextRecord) -->
+      <div style="margin-bottom:22px;">
+        <label style="display:block; font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">
+          🌐 Registro de Datos / IPFS / Web3 Profile (Text Record)
+        </label>
+        <span style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:8px;">
+          Ingresa un hash IPFS (<code>ipfs://Qm...</code>), URL de sitio web, avatar, Twitter/X o biografía:
+        </span>
+        <input type="text" id="manageTextInput" placeholder="ej. ipfs://bafy... o https://miweb.com o @miusuario" style="width:100%; box-sizing:border-box; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px 14px; color:#fff; font-size:13px; margin-bottom:10px;" />
+        <button id="btnSaveText" class="btn-action-primary" style="padding:10px; font-size:13px; border-radius:10px; background:linear-gradient(135deg, #06b6d4, #3b82f6);" onclick="saveTextRecord()">
+          Actualizar Registro de Datos
+        </button>
+      </div>
+
+      <div style="border-top:1px dashed rgba(255,255,255,0.1); margin:18px 0;"></div>
+
+      <!-- 3. Establecer como Dominio Primario (setPrimaryDomain) -->
+      <div>
+        <label style="display:block; font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">
+          ⭐ Nombre de Dominio Primario (Resolución Inversa)
+        </label>
+        <span style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:10px;">
+          Muestra este dominio como tu identidad pública principal al conectar tu wallet en DApps.
+        </span>
+        <button id="btnSetPrimary" class="btn-action-primary" style="padding:11px; font-size:13px; border-radius:10px; background:linear-gradient(135deg, #10b981, #059669);" onclick="savePrimaryDomain()">
+          ⭐ Establecer como mi Dominio Primario
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Multi-Wallet -->
   <div id="walletModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; backdrop-filter:blur(6px); align-items:center; justify-content:center;">
     <div style="background:#171926; border:1px solid rgba(131,110,249,0.3); border-radius:20px; width:90%; max-width:400px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.8);">
@@ -1999,7 +2070,14 @@
                   <span class="card-price-val" style="color:#34d399; font-size: 14px;">En tu poder</span>
                 </div>
               </div>
-              <button class="btn-buy" style="background:var(--gradient-btn);" onclick="prepareSellDomain('${dom.name}')">Poner en Venta</button>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px;">
+                <button class="btn-buy" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); margin-top:0;" onclick="openManageModal('${dom.name}')">
+                  ⚙️ Administrar / Configurar
+                </button>
+                <button class="btn-buy" style="background:var(--gradient-btn); margin-top:0;" onclick="prepareSellDomain('${dom.name}')">
+                  🏷️ Poner en Venta
+                </button>
+              </div>
             </div>
           `;
         }
@@ -2012,6 +2090,141 @@
             Error cargando tus dominios: ${err.message || err}
           </div>
         `;
+      }
+    }
+
+    let activeManagingDomain = "";
+
+    async function openManageModal(domainName) {
+      if (!signer) {
+        openWalletModal();
+        return;
+      }
+
+      activeManagingDomain = domainName;
+      document.getElementById("manageModalTitle").innerText = `⚙️ ${domainName}.monad`;
+      document.getElementById("manageDomainBadge").innerText = `${domainName}.monad`;
+      document.getElementById("manageAddressInput").value = "Cargando datos...";
+      document.getElementById("manageTextInput").value = "Cargando datos...";
+      document.getElementById("manageDomainModal").style.display = "flex";
+
+      try {
+        const rpc = new ethers.JsonRpcProvider("https://testnet-rpc.monad.xyz");
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, [
+          "function computeTokenId(string) pure returns (uint256)",
+          "function domains(uint256) view returns (string name, address resolvedAddress, uint256 registeredAt, uint256 expiresAt, string textRecord)"
+        ], rpc);
+
+        const tokenId = await registry.computeTokenId(domainName);
+        const domainData = await registry.domains(tokenId);
+
+        document.getElementById("manageAddressInput").value = domainData.resolvedAddress || "";
+        document.getElementById("manageTextInput").value = domainData.textRecord || "";
+      } catch (e) {
+        console.error("Error leyendo datos del dominio:", e);
+        document.getElementById("manageAddressInput").value = userAddress || "";
+        document.getElementById("manageTextInput").value = "";
+      }
+    }
+
+    function closeManageModal() {
+      document.getElementById("manageDomainModal").style.display = "none";
+      activeManagingDomain = "";
+    }
+
+    function fillMyAddress() {
+      if (userAddress) {
+        document.getElementById("manageAddressInput").value = userAddress;
+      }
+    }
+
+    async function saveResolvedAddress() {
+      if (!signer || !activeManagingDomain) return;
+      const targetAddress = document.getElementById("manageAddressInput").value.trim();
+      if (!ethers.isAddress(targetAddress)) {
+        showToast("Por favor ingresa una dirección EVM válida (0x...)", false);
+        return;
+      }
+
+      const btn = document.getElementById("btnSaveAddress");
+      const prevText = btn.innerText;
+      try {
+        btn.innerText = "Firmando en Wallet...";
+        btn.disabled = true;
+        showToast(`Vinculando ${targetAddress.slice(0,6)}... a ${activeManagingDomain}.monad...`, true);
+
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, [
+          "function setResolvedAddress(string,address)"
+        ], signer);
+
+        const tx = await registry.setResolvedAddress(activeManagingDomain, targetAddress);
+        showToast("Transacción enviada, confirmando...", true);
+        await tx.wait();
+
+        showToast(`✅ Dirección vinculada con éxito a ${activeManagingDomain}.monad!`);
+      } catch (err) {
+        console.error(err);
+        showToast("Error al guardar: " + (err.reason || err.message), false);
+      } finally {
+        btn.innerText = prevText;
+        btn.disabled = false;
+      }
+    }
+
+    async function saveTextRecord() {
+      if (!signer || !activeManagingDomain) return;
+      const record = document.getElementById("manageTextInput").value.trim();
+
+      const btn = document.getElementById("btnSaveText");
+      const prevText = btn.innerText;
+      try {
+        btn.innerText = "Firmando en Wallet...";
+        btn.disabled = true;
+        showToast(`Guardando registro en blockchain...`, true);
+
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, [
+          "function setTextRecord(string,string)"
+        ], signer);
+
+        const tx = await registry.setTextRecord(activeManagingDomain, record);
+        showToast("Transacción enviada, confirmando...", true);
+        await tx.wait();
+
+        showToast(`✅ Registro de datos guardado en ${activeManagingDomain}.monad!`);
+      } catch (err) {
+        console.error(err);
+        showToast("Error al guardar registro: " + (err.reason || err.message), false);
+      } finally {
+        btn.innerText = prevText;
+        btn.disabled = false;
+      }
+    }
+
+    async function savePrimaryDomain() {
+      if (!signer || !activeManagingDomain) return;
+
+      const btn = document.getElementById("btnSetPrimary");
+      const prevText = btn.innerText;
+      try {
+        btn.innerText = "Firmando en Wallet...";
+        btn.disabled = true;
+        showToast(`Configurando ${activeManagingDomain}.monad como tu dominio principal...`, true);
+
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, [
+          "function setPrimaryDomain(string)"
+        ], signer);
+
+        const tx = await registry.setPrimaryDomain(activeManagingDomain);
+        showToast("Transacción enviada, confirmando...", true);
+        await tx.wait();
+
+        showToast(`🌟 ¡${activeManagingDomain}.monad es ahora tu Dominio Primario!`);
+      } catch (err) {
+        console.error(err);
+        showToast("Error: " + (err.reason || err.message), false);
+      } finally {
+        btn.innerText = prevText;
+        btn.disabled = false;
       }
     }
 
