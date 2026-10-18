@@ -1002,28 +1002,44 @@
 
   
   
-  <!-- Modal Código QR Universal -->
-  <div id="qrModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; backdrop-filter:blur(8px); align-items:center; justify-content:center;">
-    <div style="background:#171926; border:1px solid rgba(131,110,249,0.3); border-radius:24px; width:92%; max-width:380px; padding:28px; text-align:center; box-shadow:0 25px 60px rgba(0,0,0,0.9);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+  <!-- Modal Código QR Universal / WalletConnect -->
+  <div id="qrModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#171926; border:1px solid rgba(131,110,249,0.3); border-radius:24px; width:100%; max-width:400px; padding:24px; text-align:center; box-shadow:0 25px 60px rgba(0,0,0,0.9);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <h3 style="margin:0; font-size:18px; color:#fff; display:flex; align-items:center; gap:8px;">
-          <span>📱</span> Escanea con tu Wallet
+          <span>📱</span> Conectar Wallet
         </h3>
         <button onclick="closeQrModal()" style="background:none; border:none; color:#94a3b8; font-size:24px; cursor:pointer;">&times;</button>
       </div>
 
-      <p style="font-size:13px; color:#94a3b8; margin-bottom:16px;">
-        Abre <strong>Ledger Live, Trust Wallet, Rainbow, MetaMask</strong> o cualquier app Web3 y escanea este código:
+      <p style="font-size:13px; color:#94a3b8; margin-bottom:14px;">
+        Escanea el QR desde tu app o pulsa abajo para abrir directamente tu billetera:
       </p>
 
-      <div style="background:#fff; padding:16px; border-radius:16px; display:inline-block; margin-bottom:18px;" id="qrcodeBox"></div>
+      <div style="background:#fff; padding:14px; border-radius:16px; display:inline-block; margin-bottom:14px;" id="qrcodeBox"></div>
+
+      <!-- Accesos Directos a Billeteras Móviles -->
+      <div id="mobileWalletDirectLinks" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+        <button onclick="openWcApp('metamask')" style="background:#222538; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:10px; font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+          🦊 MetaMask
+        </button>
+        <button onclick="openWcApp('trust')" style="background:#222538; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:10px; font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+          🛡️ Trust Wallet
+        </button>
+        <button onclick="openWcApp('phantom')" style="background:#222538; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:10px; font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+          👻 Phantom
+        </button>
+        <button onclick="openWcApp('rainbow')" style="background:#222538; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:10px; font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+          🌈 Rainbow
+        </button>
+      </div>
 
       <div style="display:flex; flex-direction:column; gap:8px;">
-        <button id="copyUriBtn" onclick="copyWalletConnectUri()" style="background:#222538; border:1px solid rgba(255,255,255,0.1); color:#c4b5fd; padding:10px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer;">
+        <button id="copyUriBtn" onclick="copyWalletConnectUri()" style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#c4b5fd; padding:10px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer;">
           📋 Copiar enlace de conexión
         </button>
-        <a id="openWalletMobileLink" href="#" style="background:#3b82f6; color:#fff; text-decoration:none; padding:12px; border-radius:10px; font-weight:700; font-size:14px; display:none;">
-          Abrir en App de Billetera
+        <a id="openWalletMobileLink" href="#" style="background:var(--gradient-btn); color:#fff; text-decoration:none; padding:12px; border-radius:10px; font-weight:700; font-size:14px; display:none;">
+          Abrir en cualquier Billetera
         </a>
       </div>
     </div>
@@ -1447,13 +1463,32 @@
       document.getElementById("qrModal").style.display = "none";
     }
 
-    function copyWalletConnectUri() {
-      if (currentWcUri) {
-        navigator.clipboard.writeText(currentWcUri);
-        const btn = document.getElementById("copyUriBtn");
-        btn.innerText = "✅ ¡Enlace copiado!";
-        setTimeout(() => { btn.innerText = "📋 Copiar enlace de conexión"; }, 2000);
+    function openWcApp(walletType) {
+      if (!currentWcUri) {
+        showToast("Generando enlace de conexión...", true);
+        return;
       }
+      const encodedUri = encodeURIComponent(currentWcUri);
+      let targetUrl = currentWcUri;
+
+      switch(walletType) {
+        case 'metamask':
+          targetUrl = `https://metamask.app.link/wc?uri=${encodedUri}`;
+          break;
+        case 'trust':
+          targetUrl = `https://link.trustwallet.com/wc?uri=${encodedUri}`;
+          break;
+        case 'rainbow':
+          targetUrl = `https://rainbow.me/wc?uri=${encodedUri}`;
+          break;
+        case 'phantom':
+          targetUrl = `https://phantom.app/ul/v1/connect?uri=${encodedUri}`;
+          break;
+        default:
+          targetUrl = currentWcUri;
+      }
+
+      window.location.href = targetUrl;
     }
 
     
@@ -1536,15 +1571,16 @@
           throw new Error("No se pudo cargar la librería de WalletConnect. Verifica tu conexión a internet.");
         }
 
-        // Configurar Provider con cadenas opcionales para evitar que wallets que aún no tienen Monad por defecto rechacen el handshake
+        // Configurar Provider con chainId 1 (Ethereum) en chains y 10143 (Monad) en optionalChains
+        // Esto evita que wallets como MetaMask/Trust fallen con 'no se pudo transmitir la info / Unrecognized chain'
         const wcProvider = await ProviderClass.init({
           projectId: "c4f79cc821944d9680842e34466bfb",
-          chains: [10143],
-          optionalChains: [10143, 1], // Monad Testnet y Ethereum Mainnet como fallback
+          chains: [1],
+          optionalChains: [10143],
           showQrModal: false,
           rpcMap: {
-            10143: "https://testnet-rpc.monad.xyz",
-            1: "https://eth.llamarpc.com"
+            1: "https://eth.llamarpc.com",
+            10143: "https://testnet-rpc.monad.xyz"
           },
           metadata: {
             name: "Monad Names Marketplace",
