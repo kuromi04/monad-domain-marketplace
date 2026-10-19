@@ -7,8 +7,22 @@
   <title>Monad Name Service (.monad) - Web3 Marketplace</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 
-  <!-- WalletConnect / AppKit CDN con bundle universal compatible con navegador -->
+  <script>
+    // Polyfill esencial para compatibilidad universal de librerías Web3 (WalletConnect) en el navegador
+    window.process = window.process || { env: { NODE_ENV: "production" } };
+    window.global = window.global || window;
+  </script>
+  <!-- WalletConnect Ethereum Provider Bundle UMD oficial -->
   <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js"></script>
+  <script>
+    // Normalizar la exportación en window.EthereumProvider
+    (function normalizeWalletConnect() {
+      const pkg = window["@walletconnect/ethereum-provider"];
+      if (pkg) {
+        window.EthereumProvider = pkg.EthereumProvider || pkg.default || pkg;
+      }
+    })();
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1873,26 +1887,51 @@
       const isMobile = isMobileDevice();
 
       try {
-        let ProviderClass = window.EthereumProvider ||
-                            window.WalletConnectEthereumProvider?.default ||
-                            window.WalletConnectEthereumProvider ||
-                            window["@walletconnect/ethereum-provider"]?.EthereumProvider ||
-                            window["@walletconnect/ethereum-provider"]?.default;
+        function getProviderClass() {
+          return window.EthereumProvider ||
+                 (window["@walletconnect/ethereum-provider"] && window["@walletconnect/ethereum-provider"].EthereumProvider) ||
+                 (window["@walletconnect/ethereum-provider"] && window["@walletconnect/ethereum-provider"].default) ||
+                 window.WalletConnectEthereumProvider?.default ||
+                 window.WalletConnectEthereumProvider;
+        }
+
+        let ProviderClass = getProviderClass();
 
         if (!ProviderClass) {
+          // Asegurar polyfill de process antes de inyectar el script
+          window.process = window.process || { env: { NODE_ENV: "production" } };
+          window.global = window.global || window;
+
           await new Promise((resolve) => {
             const script = document.createElement("script");
-            script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
-            script.onload = resolve;
-            script.onerror = resolve;
+            script.src = "https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
+            script.async = true;
+            script.onload = () => {
+              if (window["@walletconnect/ethereum-provider"]) {
+                window.EthereumProvider = window["@walletconnect/ethereum-provider"].EthereumProvider || 
+                                          window["@walletconnect/ethereum-provider"].default;
+              }
+              resolve();
+            };
+            script.onerror = () => {
+              console.warn("Fallo carga desde jsdelivr, reintentando con unpkg...");
+              const scriptBackup = document.createElement("script");
+              scriptBackup.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.14.0/dist/index.umd.js";
+              scriptBackup.async = true;
+              scriptBackup.onload = () => {
+                if (window["@walletconnect/ethereum-provider"]) {
+                  window.EthereumProvider = window["@walletconnect/ethereum-provider"].EthereumProvider || 
+                                            window["@walletconnect/ethereum-provider"].default;
+                }
+                resolve();
+              };
+              scriptBackup.onerror = resolve;
+              document.head.appendChild(scriptBackup);
+            };
             document.head.appendChild(script);
           });
 
-          ProviderClass = window.EthereumProvider ||
-                          window.WalletConnectEthereumProvider?.default ||
-                          window.WalletConnectEthereumProvider ||
-                          window["@walletconnect/ethereum-provider"]?.EthereumProvider ||
-                          window["@walletconnect/ethereum-provider"]?.default;
+          ProviderClass = getProviderClass();
         }
 
         if (!ProviderClass) {
@@ -1902,7 +1941,7 @@
             const currentUrl = window.location.href.replace(/^https?:\/\//, "");
             window.location.href = "https://metamask.app.link/dapp/" + currentUrl;
           } else {
-            showToast("No se pudo cargar la librería de conexión. Por favor usa una extensión como MetaMask o Rabby.", false);
+            showToast("No se pudo iniciar WalletConnect. Conéctate directamente con la extensión de MetaMask o Rabby arriba.", false);
           }
           return;
         }
